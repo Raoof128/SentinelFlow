@@ -21,11 +21,13 @@
 using namespace sf;
 
 static bool running = true;
+static bool verbose = false;
 static TrafficStats* g_stats = nullptr;
+static PacketCapture* g_capture = nullptr;
 
 void signal_handler(int) {
     running = false;
-    if (g_stats) g_stats->print_summary();
+    if (g_capture) g_capture->stop();
 }
 
 void process_packet(const uint8_t* data, uint32_t length,
@@ -94,6 +96,37 @@ void process_packet(const uint8_t* data, uint32_t length,
 
     stats.record(pkt);
 
+    // Verbose: print every packet
+    if (verbose && pkt.ipv4) {
+        std::cout << ip_to_string(pkt.ipv4->src_ip);
+        if (pkt.tcp)       std::cout << ":" << pkt.tcp->src_port;
+        else if (pkt.udp)  std::cout << ":" << pkt.udp->src_port;
+        std::cout << " -> " << ip_to_string(pkt.ipv4->dst_ip);
+        if (pkt.tcp)       std::cout << ":" << pkt.tcp->dst_port;
+        else if (pkt.udp)  std::cout << ":" << pkt.udp->dst_port;
+
+        if (pkt.tcp) {
+            std::cout << " [TCP";
+            if (pkt.tcp->flags & TCP_SYN) std::cout << " SYN";
+            if (pkt.tcp->flags & TCP_ACK) std::cout << " ACK";
+            if (pkt.tcp->flags & TCP_FIN) std::cout << " FIN";
+            if (pkt.tcp->flags & TCP_RST) std::cout << " RST";
+            if (pkt.tcp->flags & TCP_PSH) std::cout << " PSH";
+            std::cout << "]";
+        } else if (pkt.udp) {
+            std::cout << " [UDP]";
+            if (pkt.dns) std::cout << " DNS:" << pkt.dns->query_name;
+        } else if (pkt.icmp) {
+            std::cout << " [ICMP type=" << (int)pkt.icmp->type << "]";
+        }
+        std::cout << " len=" << length << std::endl;
+    } else if (verbose && pkt.arp) {
+        std::cout << ip_to_string(pkt.arp->sender_ip) << " -> "
+                  << ip_to_string(pkt.arp->target_ip)
+                  << " [ARP opcode=" << pkt.arp->opcode << "]"
+                  << std::endl;
+    }
+
     // Run detection
     auto detected = engine.analyze(pkt);
     if (!detected.empty()) {
@@ -108,6 +141,7 @@ void print_usage(const char* prog) {
               << "  --rules FILE      Load detection rules (default: rules/default.rules)\n"
               << "  --log FILE        Write alerts to CSV log file\n"
               << "  --filter EXPR     Set BPF filter (e.g., 'tcp port 80')\n"
+              << "  -v, --verbose     Print every packet (like Wireshark)\n"
               << "  -h, --help        Show this help\n"
               << "\nExamples:\n"
               << "  sudo " << prog << " en0\n"
@@ -132,6 +166,8 @@ int main(int argc, char* argv[]) {
             log_file = argv[++i];
         } else if (arg == "--filter" && i + 1 < argc) {
             bpf_filter = argv[++i];
+        } else if (arg == "-v" || arg == "--verbose") {
+            verbose = true;
         } else if (arg == "-h" || arg == "--help") {
             print_usage(argv[0]);
             return 0;
@@ -157,7 +193,6 @@ int main(int argc, char* argv[]) {
     // Set up stats
     TrafficStats stats;
     g_stats = &stats;
-    std::signal(SIGINT, signal_handler);
 
     // Create capture source
     std::unique_ptr<PacketCapture> capture;
@@ -168,6 +203,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Capturing on interface: " << iface << std::endl;
         capture = std::make_unique<LiveCapture>(iface);
     }
+
+    g_capture = capture.get();
+    std::signal(SIGINT, signal_handler);
 
     if (!capture->open()) {
         std::cerr << "Failed to open capture source. ";
