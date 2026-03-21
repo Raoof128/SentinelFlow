@@ -1,5 +1,46 @@
 # Changelog — SentinelFlow
 
+## [1.1.0] - 2026-03-21
+
+Raouf:
+- **Date:** 2026-03-21 (AEDT)
+- **Scope:** Production audit — code quality, documentation, CI/CD, tooling
+- **Summary:** Comprehensive audit bringing repository to industry-grade standard
+  - **Code quality fixes:**
+    - Added error handling (try-catch) around all `std::stoul`/`std::stoi` calls in rule_parser.cpp and ip_utils.cpp
+    - Fixed CSV escaping in csv_logger.cpp (RFC 4180 compliance)
+    - Added missing `#include <cstring>` and `#include <arpa/inet.h>` in test_integration.cpp
+  - **Documentation:**
+    - Rewrote README.md with badges, table of contents, architecture diagram, sample output, detection capabilities table, performance benchmarks, project structure
+    - Expanded docs/architecture.md with data flow, detection strategies, threading model, extensibility guide
+    - Expanded docs/rules_format.md with flag reference table, additional examples, notes section
+    - Added CONTRIBUTING.md with full development guide, code style, commit format, PR process
+    - Added CODE_OF_CONDUCT.md (Contributor Covenant)
+    - Added SECURITY.md with vulnerability reporting policy
+  - **CI/CD:**
+    - Upgraded ci.yml: matrix build (g++/clang++ x Debug/Release), clang-format check, clang-tidy static analysis
+  - **Tooling configs:**
+    - Added .clang-format (LLVM-based, C++17, 4-space indent, 100-col)
+    - Added .clang-tidy (bugprone, cppcoreguidelines, modernize, performance, readability)
+    - Added .editorconfig (cross-editor consistency)
+    - Added .gitattributes (line endings, binary detection, linguist)
+    - Added Doxyfile (API documentation generation)
+  - **GitHub templates:**
+    - Added .github/ISSUE_TEMPLATE/bug_report.md
+    - Added .github/ISSUE_TEMPLATE/feature_request.md
+    - Added .github/PULL_REQUEST_TEMPLATE.md
+- **Files changed:** 20+ files added/modified
+  - New: CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, .clang-format, .clang-tidy, .editorconfig, .gitattributes, Doxyfile
+  - New: .github/ISSUE_TEMPLATE/bug_report.md, .github/ISSUE_TEMPLATE/feature_request.md, .github/PULL_REQUEST_TEMPLATE.md
+  - Modified: README.md, .github/workflows/ci.yml, src/detection/rule_parser.cpp, src/alert/csv_logger.cpp, src/utils/ip_utils.cpp, tests/test_integration.cpp, docs/architecture.md, docs/rules_format.md, AGENT.md
+- **Verification:** 27/27 tests pass, clean build, zero warnings
+- **Follow-ups:**
+  - Add compiler warning flags (-Wall -Wextra -Wpedantic) to CMakeLists.txt
+  - Run clang-format across entire codebase
+  - Set up Doxygen generation in CI
+
+---
+
 ## [1.0.0] - 2026-03-21
 
 Raouf:

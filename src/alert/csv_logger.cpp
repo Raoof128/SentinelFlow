@@ -14,6 +14,16 @@ CsvLogger::~CsvLogger() {
     if (file_.is_open()) file_.close();
 }
 
+static std::string escape_csv(const std::string& field) {
+    std::string escaped;
+    escaped.reserve(field.size());
+    for (char c : field) {
+        if (c == '"') escaped += "\"\"";
+        else escaped += c;
+    }
+    return escaped;
+}
+
 void CsvLogger::emit(const Alert& alert) {
     file_ << format_timestamp(alert.timestamp) << ","
           << alert.severity_string() << ","
@@ -22,7 +32,7 @@ void CsvLogger::emit(const Alert& alert) {
           << alert.src_port << ","
           << ip_to_string(alert.dst_ip) << ","
           << alert.dst_port << ","
-          << "\"" << alert.message << "\""
+          << "\"" << escape_csv(alert.message) << "\""
           << "\n";
     file_.flush();
 }

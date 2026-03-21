@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <regex>
+#include <stdexcept>
 
 namespace sf {
 
@@ -67,7 +68,12 @@ std::optional<Rule> RuleParser::parse_line(const std::string& line) {
                 rule.message = option.substr(q1 + 1, q2 - q1 - 1);
             }
         } else if (option.substr(0, 4) == "sid:") {
-            rule.sid = std::stoul(option.substr(4));
+            try {
+                rule.sid = std::stoul(option.substr(4));
+            } catch (const std::exception& e) {
+                std::cerr << "Invalid sid value: " << option << std::endl;
+                return std::nullopt;
+            }
         } else if (option.substr(0, 6) == "flags:") {
             std::string flags_str = option.substr(6);
             uint8_t flags = 0;
@@ -86,11 +92,21 @@ std::optional<Rule> RuleParser::parse_line(const std::string& line) {
             auto vals = option.substr(10);
             auto comma = vals.find(',');
             if (comma != std::string::npos) {
-                rule.threshold_count = std::stoul(vals.substr(0, comma));
-                rule.threshold_seconds = std::stoul(vals.substr(comma + 1));
+                try {
+                    rule.threshold_count = std::stoul(vals.substr(0, comma));
+                    rule.threshold_seconds = std::stoul(vals.substr(comma + 1));
+                } catch (const std::exception& e) {
+                    std::cerr << "Invalid threshold value: " << option << std::endl;
+                    return std::nullopt;
+                }
             }
         } else if (option.substr(0, 15) == "dns_query_len:>") {
-            rule.dns_query_min_len = std::stoul(option.substr(15));
+            try {
+                rule.dns_query_min_len = std::stoul(option.substr(15));
+            } catch (const std::exception& e) {
+                std::cerr << "Invalid dns_query_len value: " << option << std::endl;
+                return std::nullopt;
+            }
         } else if (option.substr(0, 8) == "content:") {
             auto q1 = option.find('"');
             auto q2 = option.rfind('"');

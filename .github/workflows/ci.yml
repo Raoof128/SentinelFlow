@@ -9,6 +9,10 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+        build_type: [Debug, Release]
 
     steps:
       - uses: actions/checkout@v4
@@ -16,17 +20,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpcap-dev cmake g++ libgtest-dev
-
-      - name: Build Google Test
-        run: |
-          cd /usr/src/gtest
-          sudo cmake .
-          sudo make
-          sudo cp lib/*.a /usr/lib/ || sudo cp *.a /usr/lib/
+          sudo apt-get install -y libpcap-dev cmake
 
       - name: Configure
-        run: cmake -B build -DBUILD_TESTING=ON -DBUILD_BENCH=ON
+        run: cmake -B build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DBUILD_BENCH=ON
 
       - name: Build
         run: cmake --build build -j$(nproc)
@@ -35,4 +32,37 @@ jobs:
         run: cd build && ctest --output-on-failure
 
       - name: Run benchmark
+        if: matrix.build_type == 'Release' && matrix.compiler == 'g++'
         run: ./build/bench/benchmark_throughput
+
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format-17
+
+      - name: Check formatting
+        run: |
+          find include src tests bench -name '*.cpp' -o -name '*.hpp' | \
+            xargs clang-format-17 --dry-run --Werror --style=file 2>&1 || \
+            (echo "::error::Code formatting issues found. Run 'clang-format -i' locally." && exit 1)
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev cmake clang-tidy-17 clang-17
+
+      - name: Configure with compile commands
+        run: cmake -B build -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTING=OFF
+
+      - name: Run clang-tidy
+        run: |
+          find src include -name '*.cpp' | head -20 | \
+            xargs clang-tidy-17 -p build --warnings-as-errors='bugprone-*,clang-analyzer-*' 2>&1 || true

@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <cstring>
+#include <arpa/inet.h>
 #include "sentinelflow/parser/ethernet_parser.hpp"
 #include "sentinelflow/parser/ip_parser.hpp"
 #include "sentinelflow/parser/tcp_parser.hpp"

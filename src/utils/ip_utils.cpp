@@ -1,5 +1,6 @@
 #include "sentinelflow/utils/ip_utils.hpp"
 #include <arpa/inet.h>
+#include <stdexcept>
 
 namespace sf {
 
@@ -18,7 +19,13 @@ bool ip_matches(IPv4Address addr, const std::string& pattern) {
 
 bool port_matches(uint16_t port, const std::string& pattern) {
     if (pattern == "any") return true;
-    return port == static_cast<uint16_t>(std::stoi(pattern));
+    try {
+        int val = std::stoi(pattern);
+        if (val < 0 || val > 65535) return false;
+        return port == static_cast<uint16_t>(val);
+    } catch (const std::exception&) {
+        return false;
+    }
 }
 
 } // namespace sf
