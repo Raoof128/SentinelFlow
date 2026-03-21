@@ -1,0 +1,2 @@
+add_executable(benchmark_throughput benchmark_throughput.cpp)
+target_link_libraries(benchmark_throughput sentinelflow_lib)
