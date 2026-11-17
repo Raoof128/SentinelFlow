@@ -39,6 +39,39 @@ jobs:
         if: matrix.build_type == 'Release' && matrix.compiler == 'g++'
         run: ./build/bench/benchmark_pipeline
 
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev cmake
+
+      # -fno-sanitize-recover makes undefined behaviour fail the test instead of only printing.
+      - name: Configure with AddressSanitizer and UndefinedBehaviorSanitizer
+        run: |
+          cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DBUILD_TESTING=ON -DBUILD_BENCH=OFF
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Run tests under the sanitizers
+        run: cd build && ctest --output-on-failure
+
+      # The tests build frames in memory. This runs the binary itself, libpcap included.
+      - name: Replay the sample captures under the sanitizers
+        run: |
+          for capture in samples/*.pcap; do
+            echo "::group::$capture"
+            ./build/sentinelflow --pcap "$capture"
+            echo "::endgroup::"
+          done
+
   format-check:
     runs-on: ubuntu-latest
     steps:

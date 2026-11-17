@@ -1,6 +1,6 @@
 # SentinelFlow
 
-**Real-time network intrusion detection system built in modern C++17.**
+**A network intrusion detection system in C++17. A study project, not a production tool: see [Known Limitations](#known-limitations).**
 
 ![CI](https://github.com/Raoof128/SentinelFlow/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
@@ -46,10 +46,10 @@ SentinelFlow captures live network traffic or replays pcap files, parses protoco
 
 **Alerting**
 - Colour-coded console output with severity levels (LOW, MEDIUM, HIGH, CRITICAL)
-- CSV log export for integration with SIEM tools
+- CSV alert log
 
 **Performance**
-- Header parsing benchmarked on a single thread (see [Performance](#performance) for what the figure does and does not cover)
+- Two single-thread benchmarks on synthetic traffic: header parsing alone, and the whole pipeline end to end (see [Performance](#performance) for what each figure does and does not cover)
 
 ---
 
@@ -104,7 +104,7 @@ SentinelFlow captures live network traffic or replays pcap files, parses protoco
 ### Prerequisites
 
 - **CMake** 3.18 or later
-- **C++17** compatible compiler (GCC 8+ or Clang 7+)
+- A **C++17** compiler. CI builds with GCC 15 and Clang 21 on Ubuntu; it also builds with Apple clang 21 on macOS. Older compilers have not been tried
 - **libpcap** development headers (`libpcap-dev` on Debian/Ubuntu, `libpcap` via Homebrew on macOS)
 
 ### Build from source
@@ -202,7 +202,7 @@ Result on the author's machine (Apple M2, macOS, Apple clang 21, Release build, 
 | Throughput | about 8,300,000 packets/sec |
 | Avg latency | 0.12 us/packet |
 
-This is a measure of the pipeline code on synthetic traffic, in memory. It leaves out libpcap, the network card, disk and console I/O, and real traffic differs from this mix, so it is a yardstick for comparing changes and not a statement of capacity. The CI job prints the same benchmark on every Release g++ build, on a shared GitHub-hosted runner (the pull request that added it printed 7,779,522 packets/sec on one run and 4,250,673 on an earlier run of the same code, so shared-runner figures vary by almost a factor of two). Treat any single number, including the one above, as indicative.
+This is a measure of the pipeline code on synthetic traffic, in memory. It leaves out libpcap, the network card, disk and console I/O, and real traffic differs from this mix, so it is a yardstick for comparing changes and not a statement of capacity. The CI job prints the same benchmark on every Release g++ build, on a shared GitHub-hosted runner. The five runs made while this benchmark was being added (17 November 2026, GCC 15) printed 4,250,673, 4,594,734, 4,758,394, 7,742,303 and 7,779,522 packets/sec, so shared-runner figures vary by almost a factor of two between runs of near-identical code. Treat any single number, including the one above, as indicative.
 
 Run them yourself:
 
@@ -225,11 +225,12 @@ SentinelFlow is a study project, written to learn how an intrusion detection pip
 - **Framing is partial.** Only Ethernet captures are accepted. VLAN tags are not handled (a tagged frame is counted but not parsed), IPv6 is not parsed, and fragments and TCP streams are not reassembled: a content rule sees one packet's payload at a time, and only the first fragment's transport header is read.
 - **DNS parsing is minimal.** Only the first question of a UDP message is read, DNS over TCP is not parsed, and a compression pointer in the name ends the name instead of being followed.
 - **Rules.** The `action` field is ignored (every matching rule alerts), and port ranges, negation and address lists are not supported. Rules with options the parser does not know are rejected.
-- **Tests and benchmarks.** The tests include one end-to-end test from raw frames to alerts, but there is no fuzzing in the repository and CI does not run the tests under sanitizers. The benchmark figures are from synthetic traffic (see [Performance](#performance)).
+- **Packet time is trusted.** The stateful detectors take time from the capture's timestamps and never let it run backwards. One packet stamped far in the future (a corrupt or crafted capture file) therefore becomes "now" for everything after it: windows stop sliding, so counts build up across the rest of the run and the port-scan detector can alert on ports that were probed hours apart.
+- **Tests and benchmarks.** The tests include end-to-end tests from raw frames to alerts, and CI runs the suite and replays the sample captures under AddressSanitizer and UndefinedBehaviorSanitizer, but there is no fuzzing in the repository. The benchmark figures are from synthetic traffic (see [Performance](#performance)).
 
 ## Testing
 
-SentinelFlow includes 146 tests covering the parsers, rule parsing and signature matching, the three stateful detectors and their state limits, the pcap link-type check, and the pipeline end to end: raw Ethernet frames are built in memory, run through the library pipeline with a small rule set, and the alerts are asserted.
+SentinelFlow includes 147 tests covering the parsers, rule parsing and signature matching, the three stateful detectors and their state limits, the pcap link-type check, and the pipeline end to end: raw Ethernet frames are built in memory, run through the library pipeline with a small rule set, and the alerts are asserted.
 
 ```bash
 cmake -B build -DBUILD_TESTING=ON

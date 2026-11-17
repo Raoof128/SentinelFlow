@@ -209,3 +209,22 @@ TEST(PortScanDetectorTest, ExpiredPairsAreEvictedBeforeLiveOnesAtCapacity) {
     EXPECT_EQ(detector.tracked_pairs(), 2u);       // pairs 3 and 4
     EXPECT_EQ(detector.capacity_evictions(), 0u);  // the two dropped had expired
 }
+
+// Documents a known limitation (see README, "Packet time is trusted"): detector time never runs
+// backwards, so a single packet stamped far in the future becomes "now" for everything after
+// it and the window stops sliding. If this test starts failing because the detector has learnt
+// to distrust such a timestamp, update the README and delete or invert the test.
+TEST(PortScanDetectorTest, KnownLimitationAFarFutureTimestampFreezesTheWindow) {
+    PortScanDetector detector(5, 60);
+    auto t = std::chrono::system_clock::now();
+
+    // One bogus packet from an unrelated source, stamped ten years ahead.
+    detector.check(syn_to_port(9, 9, 1, t + std::chrono::hours(24 * 365 * 10)));
+
+    // Five ports, one per hour: far too slow to be a scan in a 60-second window.
+    std::optional<Alert> alert;
+    for (uint16_t port = 1; port <= 5; ++port)
+        alert = detector.check(syn_to_port(1, 2, port, t + std::chrono::hours(port)));
+
+    EXPECT_TRUE(alert.has_value());  // alerts anyway: every probe is treated as simultaneous
+}

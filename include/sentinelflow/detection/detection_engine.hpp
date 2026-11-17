@@ -45,7 +45,9 @@ public:
     ///  - a rule with `dns_query_len:>N` sets the DNS-tunnel name length (and, if it also has a
     ///    `threshold`, the query volume and window);
     ///  - any value no rule sets keeps its built-in default.
-    /// Detector state is reset. Returns one warning per rule that cannot take effect: a
+    /// The SYN-flood and DNS-tunnel detectors are rebuilt, so their state is reset. The
+    /// port-scan detector, which no rule configures, keeps its state and its eviction count.
+    /// Returns one warning per rule that cannot take effect: a
     /// `threshold` rule no detector consumes (for example ICMP flood, which is not implemented),
     /// a second rule for a detector that is already configured, or a stateful rule whose address
     /// or port fields are not `any` (the stateful detectors do not filter on them).
@@ -57,7 +59,8 @@ public:
     /// distributed activity is degraded, and the operator should know.
     std::vector<Alert> analyze(const ParsedPacket& pkt);
 
-    /// Cumulative capacity evictions per detector since the last apply_rules().
+    /// Cumulative capacity evictions per detector. apply_rules() restarts the SYN-flood and
+    /// DNS-tunnel counts; the port-scan count runs for the life of the engine.
     StateEvictions state_evictions() const;
 
 private:

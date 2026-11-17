@@ -1,49 +1,31 @@
 # Security Policy
 
+SentinelFlow is a study project maintained by one person in spare time. It is not hardened for production use; the README lists its known limitations.
+
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| 1.0.x   | Yes       |
+Only the current `main` branch is maintained. There are no supported release branches.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in SentinelFlow, please report it responsibly.
+Please do not open a public issue for a security problem. Use GitHub's private vulnerability reporting instead:
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+**[Report a vulnerability](https://github.com/Raoof128/SentinelFlow/security/advisories/new)** (the "Report a vulnerability" button on the repository's Security tab)
 
-Instead, please email: **raoof.abedini@proton.me**
+Useful things to include:
 
-### What to include
+- What the problem is and what an attacker gains
+- Steps or an input (a pcap or rules file) that reproduce it
+- A suggested fix, if you have one
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
-
-### Response Timeline
-
-- **Acknowledgement:** within 48 hours
-- **Assessment:** within 7 days
-- **Fix or mitigation:** as soon as practical after assessment
+Reports are read and answered as time allows; there is no guaranteed response time. Reporters are credited in the changelog unless they prefer otherwise.
 
 ## Scope
 
-This policy covers vulnerabilities in the SentinelFlow tool itself, such as:
+In scope are flaws in SentinelFlow itself, for example:
 
-- Buffer overflows in protocol parsers
-- Rule injection or parser bypass
-- Crashes from malformed input (pcap files, rule files)
-- Unsafe memory access
+- Memory-safety errors in the protocol parsers
+- Crashes or hangs from malformed input (pcap files, rules files)
+- A way to evade a detector that the documentation says it catches
 
-This policy does **not** cover the network attacks that SentinelFlow detects (port scans, SYN floods, etc.). Those are the threats the tool is designed to identify.
-
-## Responsible Disclosure
-
-We ask that you:
-
-1. Give us reasonable time to address the issue before public disclosure
-2. Avoid accessing or modifying other users' data
-3. Act in good faith to avoid disruption
-
-We will credit reporters in the changelog unless anonymity is preferred.
+The network attacks SentinelFlow looks for (port scans, SYN floods and so on) are not vulnerabilities in it. Evasions that follow from a documented limitation (no reassembly, a bounded state table, IPv4 only) are known; a report is still welcome if it shows something the README does not already say.
