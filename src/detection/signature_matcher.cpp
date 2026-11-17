@@ -12,10 +12,11 @@ SignatureMatcher::SignatureMatcher(const std::vector<Rule>& rules) : rules_(rule
 std::vector<Alert> SignatureMatcher::check(const ParsedPacket& pkt) const {
     std::vector<Alert> alerts;
     for (const auto& rule : rules_) {
-        // Skip rules with thresholds (handled by stateful detectors)
+        // Rules with a threshold or a DNS query length are not per-packet signatures. The
+        // DetectionEngine hands their values to the SYN-flood and DNS-tunnel detectors (see
+        // DetectionEngine::apply_rules), so the matcher leaves them alone.
         if (rule.threshold_count)
             continue;
-        // Skip DNS-specific rules (handled by DnsTunnelDetector)
         if (rule.dns_query_min_len)
             continue;
 
@@ -48,29 +49,38 @@ bool SignatureMatcher::matches_rule(const ParsedPacket& pkt, const Rule& rule) c
     if (rule.protocol != "any" && rule.protocol != pkt_proto)
         return false;
 
-    // Check IPs
-    if (pkt.ipv4) {
+    // Check IPs. A rule that names an address cannot match a packet that has no IPv4 header.
+    if (rule.src_ip != "any" || rule.dst_ip != "any") {
+        if (!pkt.ipv4)
+            return false;
         if (!ip_matches(pkt.ipv4->src_ip, rule.src_ip))
             return false;
         if (!ip_matches(pkt.ipv4->dst_ip, rule.dst_ip))
             return false;
     }
 
-    // Check ports
-    if (pkt.tcp) {
-        if (!port_matches(pkt.tcp->src_port, rule.src_port))
+    // Check ports. A rule that names a port needs a TCP or UDP header to read it from: ICMP
+    // messages and non-first IP fragments have none and must not match.
+    if (rule.src_port != "any" || rule.dst_port != "any") {
+        if (pkt.tcp) {
+            if (!port_matches(pkt.tcp->src_port, rule.src_port))
+                return false;
+            if (!port_matches(pkt.tcp->dst_port, rule.dst_port))
+                return false;
+        } else if (pkt.udp) {
+            if (!port_matches(pkt.udp->src_port, rule.src_port))
+                return false;
+            if (!port_matches(pkt.udp->dst_port, rule.dst_port))
+                return false;
+        } else {
             return false;
-        if (!port_matches(pkt.tcp->dst_port, rule.dst_port))
-            return false;
-    } else if (pkt.udp) {
-        if (!port_matches(pkt.udp->src_port, rule.src_port))
-            return false;
-        if (!port_matches(pkt.udp->dst_port, rule.dst_port))
-            return false;
+        }
     }
 
-    // Check TCP flags
-    if (rule.tcp_flags && pkt.tcp) {
+    // Check TCP flags, which only a TCP packet has
+    if (rule.tcp_flags) {
+        if (!pkt.tcp)
+            return false;
         if ((pkt.tcp->flags & *rule.tcp_flags) != *rule.tcp_flags)
             return false;
     }
