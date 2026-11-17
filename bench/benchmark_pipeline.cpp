@@ -173,10 +173,12 @@ std::vector<std::vector<uint8_t>> build_corpus() {
         const uint32_t server = kServers + rng.below(250);
         const uint32_t pick = rng.below(100);
         if (pick < 45) {  // established TCP data
+            // One random draw per statement: the order in which a call's arguments are evaluated
+            // is up to the compiler, and the corpus must not depend on it.
             const uint16_t port = rng.below(2) ? 80 : 443;
-            corpus.push_back(tcp_frame(client, server,
-                                       static_cast<uint16_t>(30000 + rng.below(30000)), port, 0x18,
-                                       20 + rng.below(400), rng));
+            const auto src_port = static_cast<uint16_t>(30000 + rng.below(30000));
+            const size_t payload = 20 + rng.below(400);
+            corpus.push_back(tcp_frame(client, server, src_port, port, 0x18, payload, rng));
         } else if (pick < 60) {  // bare ACKs
             corpus.push_back(tcp_frame(server, client, 443,
                                        static_cast<uint16_t>(30000 + rng.below(30000)), 0x10, 0,
