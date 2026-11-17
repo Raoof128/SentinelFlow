@@ -4,11 +4,11 @@
 
 Raouf:
 - **Date:** 2026-11-17 (AEDT)
-- **Scope:** CI — formatting only
-- **Summary:** Ran `clang-format` 17 with the repository `.clang-format` over `include/`, `src/`, `tests/` and `bench/` so the `format-check` CI job passes. Whitespace, line wrapping and include order only; no behaviour change.
-- **Files changed:** 60 `.cpp`/`.hpp` files, CHANGELOG.md, AGENT.md
-- **Verification:** `clang-format-17 --dry-run --Werror --style=file` clean; local build and `ctest` 27/27 pass
-- **Follow-ups:** none
+- **Scope:** CI — formatting and the static-analysis job
+- **Summary:** Ran `clang-format` 17 with the repository `.clang-format` over `include/`, `src/`, `tests/` and `bench/` so the `format-check` CI job passes (whitespace, line wrapping and include order only). The advisory `static-analysis` job used to run until the six-hour limit and get cancelled; each file now runs clang-tidy under `timeout 180` and the step under a 20-minute limit. No behaviour change.
+- **Files changed:** 60 `.cpp`/`.hpp` files, .github/workflows/ci.yml, CHANGELOG.md, AGENT.md
+- **Verification:** all six CI jobs pass on the pull request (static-analysis in about 4 minutes); local build and `ctest` 27/27 pass
+- **Follow-ups:** `.clang-tidy` sets the naming options to `camelCase`, which clang-tidy 17 rejects (it expects `camelBack`); clang-tidy's `nodiscard` and brace findings are advisory and not yet addressed
 
 ---
 
