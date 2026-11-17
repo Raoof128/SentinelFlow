@@ -35,3 +35,10 @@ TEST(IPv4ParserTest, RejectsShortIHL) {
     IPv4Header header;
     ASSERT_FALSE(parse_ipv4(data, sizeof(data), header));
 }
+
+TEST(IPv4ParserTest, RejectsHeaderLongerThanBuffer) {
+    uint8_t data[20] = {};
+    data[0] = 0x46;  // Version 4, IHL 6: the header claims 24 bytes but only 20 are present
+    IPv4Header header;
+    ASSERT_FALSE(parse_ipv4(data, sizeof(data), header));
+}

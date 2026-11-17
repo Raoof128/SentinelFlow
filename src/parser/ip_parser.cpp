@@ -24,7 +24,9 @@ bool parse_ipv4(const uint8_t* data, uint32_t length, IPv4Header& header) {
     std::memcpy(&header.dst_ip, data + 16, 4);
     header.src_ip = ntohl(header.src_ip);
     header.dst_ip = ntohl(header.dst_ip);
-    return (header.version == 4 && header.ihl >= 5);
+    // IHL counts 32-bit words; the header must fit in the buffer we were given.
+    return header.version == 4 && header.ihl >= 5 &&
+           static_cast<uint32_t>(header.ihl) * 4 <= length;
 }
 
 }  // namespace sf

@@ -32,10 +32,39 @@ TEST(TCPParserTest, RejectsTooShort) {
 
 TEST(TCPParserTest, ParsesMultipleFlags) {
     uint8_t data[20] = {};
+    data[12] = 0x50;  // data offset = 5
     data[13] = TCP_SYN | TCP_ACK;
     TCPHeader header;
     ASSERT_TRUE(parse_tcp(data, sizeof(data), header));
     EXPECT_TRUE(header.flags & TCP_SYN);
     EXPECT_TRUE(header.flags & TCP_ACK);
     EXPECT_FALSE(header.flags & TCP_FIN);
+}
+
+TEST(TCPParserTest, RejectsDataOffsetBelowFive) {
+    uint8_t data[20] = {};
+    data[12] = 0x40;  // data offset = 4 (16 bytes): shorter than the fixed header
+    data[13] = TCP_SYN;
+    TCPHeader header;
+    EXPECT_FALSE(parse_tcp(data, sizeof(data), header));
+
+    data[12] = 0x00;  // data offset = 0
+    EXPECT_FALSE(parse_tcp(data, sizeof(data), header));
+}
+
+TEST(TCPParserTest, RejectsDataOffsetBeyondSegment) {
+    uint8_t data[20] = {};
+    data[12] = 0x60;  // data offset = 6 (24 bytes) but only 20 bytes are present
+    data[13] = TCP_SYN;
+    TCPHeader header;
+    EXPECT_FALSE(parse_tcp(data, sizeof(data), header));
+}
+
+TEST(TCPParserTest, AcceptsDataOffsetWithOptions) {
+    uint8_t data[24] = {};
+    data[12] = 0x60;  // data offset = 6: 4 bytes of options, all present
+    data[13] = TCP_SYN;
+    TCPHeader header;
+    ASSERT_TRUE(parse_tcp(data, sizeof(data), header));
+    EXPECT_EQ(header.data_offset, 6);
 }
