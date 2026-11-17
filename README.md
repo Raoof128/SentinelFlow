@@ -194,15 +194,15 @@ There are two benchmarks, and they measure different things.
 
 **`benchmark_pipeline`** replays 10,000,000 synthetic Ethernet frames through the library pipeline (framing, parsing, statistics, the default rules, the three stateful detectors, alert dispatch) on a single thread. The frames are a fixed pseudo-random mix built in memory: about 45% TCP data, 15% bare ACKs, 15% SYNs from a large pool of sources, 10% DNS (some long names, some responses), 6% ICMP, 6% other UDP, 2% ARP and 1% fragments. Alerts go to a counter, not to the console or a file.
 
-Result on the author's machine (Apple M2, macOS, Apple clang 21, Release build, one thread, synthetic traffic; three consecutive runs gave 8.28 to 8.30 million packets/sec):
+Result on the author's machine (Apple M2, macOS, Apple clang 21, Release build, one thread, synthetic traffic, machine otherwise idle). Two sessions on 17 November 2026, three runs each: 8.28 to 8.30 million packets/sec in the first, and 8,107,042, 8,126,859 and 8,190,469 in the second:
 
 | Metric | Value |
 |--------|-------|
 | Packets processed | 10,000,000 |
-| Throughput | about 8,300,000 packets/sec |
+| Throughput | 8.1 to 8.3 million packets/sec |
 | Avg latency | 0.12 us/packet |
 
-This is a measure of the pipeline code on synthetic traffic, in memory. It leaves out libpcap, the network card, disk and console I/O, and real traffic differs from this mix, so it is a yardstick for comparing changes and not a statement of capacity. The CI job prints the same benchmark on every Release g++ build, on a shared GitHub-hosted runner. The five runs made while this benchmark was being added (17 November 2026, GCC 15) printed 4,250,673, 4,594,734, 4,758,394, 7,742,303 and 7,779,522 packets/sec, so shared-runner figures vary by almost a factor of two between runs of near-identical code. Treat any single number, including the one above, as indicative.
+This is a measure of the pipeline code on synthetic traffic, in memory. It leaves out libpcap, the network card, disk and console I/O, and real traffic differs from this mix, so it is a yardstick for comparing changes and not a statement of capacity. It also needs a quiet machine: with other jobs running on the same laptop the same binary printed between 1.0 and 1.5 million. The CI job prints the same benchmark on every Release g++ build, on a shared GitHub-hosted runner. The five runs made while this benchmark was being added (17 November 2026, GCC 15) printed 4,250,673, 4,594,734, 4,758,394, 7,742,303 and 7,779,522 packets/sec, so shared-runner figures vary by almost a factor of two between runs of near-identical code. Treat any single number, including the one above, as indicative.
 
 Run them yourself:
 

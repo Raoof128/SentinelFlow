@@ -4,6 +4,14 @@
 
 Raouf:
 - **Date:** 2026-11-17 (AEDT)
+- **Scope:** README benchmark figure for the Apple M2
+- **Summary:** The previous entry said the Apple M2 figure had not been re-measured. It has now been: three runs of `benchmark_pipeline` on an idle machine gave 8,107,042, 8,126,859 and 8,190,469 packets/sec, slightly below the 8.28 to 8.30 million recorded earlier the same day. The README gives both sessions and the range (8.1 to 8.3 million) instead of "about 8,300,000", and notes that on a busy machine the same binary printed 1.0 to 1.5 million.
+- **Files changed:** `README.md`, `AGENT.md`, `CHANGELOG.md`
+- **Verification:** Release build of `main` at `fabee90`, Apple clang 21, `./build/bench/benchmark_pipeline` three times with the load average near 2
+- **Follow-ups:** none
+
+Raouf:
+- **Date:** 2026-11-17 (AEDT)
 - **Scope:** Independent check of `main` after the detector fixes; sanitizer CI job; documentation
 - **Summary:**
   - **Sanitizers in CI.** A new `sanitizers` job builds with AddressSanitizer and UndefinedBehaviorSanitizer (`-fno-sanitize-recover=all`, so undefined behaviour fails the job), runs the test suite, and replays the three sample captures through the binary, which also exercises the libpcap path the in-memory tests skip.

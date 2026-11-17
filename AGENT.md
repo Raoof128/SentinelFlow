@@ -96,3 +96,11 @@ Raouf:
 - Files: .github/workflows/ci.yml, include/sentinelflow/detection/detection_engine.hpp, tests/test_port_scan_detector.cpp, README.md, SECURITY.md, AGENT.md, CHANGELOG.md
 - Verification: 146/146 under ASan+UBSan locally before the change, 147/147 after (Apple clang 21); sample output in the README reproduced with `TZ=UTC`; the five CI pipeline-benchmark figures read from the run logs. The Apple M2 figure (about 8.3 million packets/sec) was not re-measured: the machine was under heavy unrelated load at the time
 - Follow-ups: fuzz the parsers and the rule parser; decide how to treat implausible capture timestamps
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: README benchmark figure for the Apple M2
+- Summary: Re-measured `benchmark_pipeline` on an idle Apple M2 (8,107,042, 8,126,859 and 8,190,469 packets/sec); README now gives 8.1 to 8.3 million across two sessions instead of "about 8,300,000", and notes how far a busy machine moves the figure
+- Files: README.md, AGENT.md, CHANGELOG.md
+- Verification: Release build of main at fabee90, three runs, load average near 2
+- Follow-ups: none
