@@ -4,6 +4,20 @@
 
 Raouf:
 - **Date:** 2026-11-17 (AEDT)
+- **Scope:** Independent check of `main` after the detector fixes; sanitizer CI job; documentation
+- **Summary:**
+  - **Sanitizers in CI.** A new `sanitizers` job builds with AddressSanitizer and UndefinedBehaviorSanitizer (`-fno-sanitize-recover=all`, so undefined behaviour fails the job), runs the test suite, and replays the three sample captures through the binary, which also exercises the libpcap path the in-memory tests skip.
+  - **Review, no code defects found.** `SourceTable`, the three detectors, the pipeline and the parsers were read against the README and both documents in `docs/`. Two comments in `detection_engine.hpp` were wrong: `apply_rules()` does not reset the port-scan detector, and `state_evictions()` is not "since the last apply_rules()" for it.
+  - **A limitation that was not written down.** The detectors take time from capture timestamps and never let it run backwards, so one packet stamped far in the future freezes every window for the rest of the run. Now listed under Known Limitations, with a test that pins the behaviour (`KnownLimitationAFarFutureTimestampFreezesTheWindow`), so the suite is 147 tests.
+  - **README.** Lists all five CI runs of the pipeline benchmark (4.25 to 7.78 million packets/sec) instead of two; the lead no longer says "real-time"; "CSV log export for integration with SIEM tools" is "CSV alert log"; the Features list mentions the end-to-end benchmark; the compiler requirement states what CI builds with instead of untested minimum versions.
+  - **SECURITY.md.** Reports go through GitHub private vulnerability reporting (enabled on the repository) instead of an email address; the response-time promises and the "1.0.x supported" table are gone, since only `main` is maintained.
+  - **AGENT.md.** Two early log entries claimed an "industry-grade standard" and "pending build verification"; both are reworded to what was true.
+- **Files changed:** `.github/workflows/ci.yml`, `include/sentinelflow/detection/detection_engine.hpp`, `tests/test_port_scan_detector.cpp`, `README.md`, `SECURITY.md`, `AGENT.md`, `CHANGELOG.md`
+- **Verification:** fresh clone of `main` at `1690c3a`; 146/146 tests under ASan+UBSan locally before any change and 147/147 after (Apple clang 21); the README's sample output reproduced with `TZ=UTC`; CI benchmark figures read from the five run logs. The Apple M2 figure was not re-measured (the machine was under heavy unrelated load).
+- **Follow-ups:** fuzzing; a policy for implausible capture timestamps
+
+Raouf:
+- **Date:** 2026-11-17 (AEDT)
 - **Scope:** Two detection bypasses found by a security review of the detector changes
 - **Summary:**
   - **DNS tunnel detector trusted the QR bit.** It ignored any message whose DNS QR bit was set, but the sender controls that bit, so a client exfiltrating over DNS could set QR=1 on its queries and never be counted. A message is now a reply (and ignored) only if the transport says so: sent from port 53 to another port. A message sent to port 53 is analysed whatever its QR bit says. `DNSHeader::is_response` is still parsed and exposed but no detector relies on it.

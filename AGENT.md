@@ -1,7 +1,7 @@
 # AGENT.md — SentinelFlow
 
 ## Project Overview
-SentinelFlow is a real-time network intrusion detection system (NIDS) built in C++17. It captures live network traffic via libpcap, parses protocol headers, detects known attack signatures using a rule engine and stateful analysis, and logs structured security alerts.
+SentinelFlow is a network intrusion detection system (NIDS) in C++17, written as a study project. It captures live traffic or replays pcap files via libpcap, parses protocol headers, detects known attack signatures using a rule engine and stateful analysis, and logs structured security alerts.
 
 ## Architecture
 - **Namespace:** All code lives in `sf`
@@ -38,13 +38,13 @@ Raouf:
 - Scope: Full project scaffold
 - Summary: Initial implementation of SentinelFlow NIDS — all modules created from blueprint
 - Files: 68 files across include/, src/, tests/, bench/, docs/, .github/
-- Verification: Project scaffolded, pending build verification
+- Verification: None at the time. The build was first verified in the next entry
 - Follow-ups: Install libpcap, verify build on target platform, add sample .pcap files
 
 Raouf:
 - Date: 2026-03-21 (AEDT)
-- Scope: Production audit — code quality, docs, CI/CD, tooling
-- Summary: Comprehensive audit bringing repo to industry-grade standard
+- Scope: Audit of code quality, docs, CI and tooling
+- Summary: Added tooling, CI, documentation and input checks. (This entry first described the result as an "industry-grade standard"; the November 2026 reviews below found defects that claim did not survive, and the wording was withdrawn.)
 - Files: 20+ files added/modified (see CHANGELOG.md for full list)
 - Verification: 27/27 tests pass, clean build, zero warnings
 - Follow-ups: Consider adding compiler warning flags (-Wall -Wextra -Wpedantic) to CMakeLists.txt
@@ -88,3 +88,11 @@ Raouf:
 - Files: see CHANGELOG.md (new: tests/test_source_table.cpp)
 - Verification: 146/146 tests pass locally; reverting each fix fails six new tests; clang-format 17 clean; ASan/UBSan clean; CI on the pull request
 - Follow-ups: non-heuristic protection against table flushing; tune the eviction group size
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: Independent check of main after the detector fixes; sanitizer CI job; documentation
+- Summary: Rebuilt main from a fresh clone and ran the 146 tests under AddressSanitizer and UndefinedBehaviorSanitizer (clean); read `SourceTable`, the detectors, the pipeline and the parsers against README, docs/architecture.md and docs/rules_format.md; added a CI job that runs the tests and replays the sample captures under both sanitizers; corrected the `apply_rules`/`state_evictions` comments (the port-scan detector keeps its state); README now lists every CI benchmark run, drops "real-time" and "SIEM integration", and documents that one far-future timestamp freezes the detectors' windows (pinned by a new test, 147 in all); SECURITY.md points to GitHub private vulnerability reporting
+- Files: .github/workflows/ci.yml, include/sentinelflow/detection/detection_engine.hpp, tests/test_port_scan_detector.cpp, README.md, SECURITY.md, AGENT.md, CHANGELOG.md
+- Verification: 146/146 under ASan+UBSan locally before the change, 147/147 after (Apple clang 21); sample output in the README reproduced with `TZ=UTC`; the five CI pipeline-benchmark figures read from the run logs. The Apple M2 figure (about 8.3 million packets/sec) was not re-measured: the machine was under heavy unrelated load at the time
+- Follow-ups: fuzz the parsers and the rule parser; decide how to treat implausible capture timestamps
