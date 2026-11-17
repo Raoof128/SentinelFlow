@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "sentinelflow/capture/link_type.hpp"
+
 namespace sf {
 
 PcapFileReader::PcapFileReader(const std::string& filepath)
@@ -17,6 +19,11 @@ bool PcapFileReader::open() {
     handle_ = pcap_open_offline(filepath_.c_str(), errbuf);
     if (!handle_) {
         std::cerr << "pcap_open_offline failed: " << errbuf << std::endl;
+        return false;
+    }
+    if (!require_ethernet_link(handle_, filepath_)) {
+        pcap_close(handle_);
+        handle_ = nullptr;
         return false;
     }
     return true;

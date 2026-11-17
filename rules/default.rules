@@ -1,5 +1,10 @@
 # SentinelFlow Default Detection Rules
 # Format: action protocol src_ip src_port -> dst_ip dst_port (options)
+#
+# Two rules configure a stateful detector instead of matching packets one by one:
+#   sid 2001  SYN flood: threshold:count,seconds is the SYN count per destination in the window
+#   sid 3001  DNS tunnelling: dns_query_len:>N is the query-name length that counts as long
+# An ICMP flood rule is not included: no detector implements it (see docs/rules_format.md).
 
 alert tcp any any -> any 22 (msg:"SSH connection attempt"; sid:1001;)
 alert tcp any any -> any 23 (msg:"Telnet connection detected"; sid:1002;)
@@ -7,6 +12,5 @@ alert tcp any any -> any 3389 (msg:"RDP connection attempt"; sid:1003;)
 alert tcp any any -> any 445 (msg:"SMB connection attempt"; sid:1004;)
 alert tcp any any -> any 3306 (msg:"MySQL connection attempt"; sid:1005;)
 alert tcp any any -> any 5432 (msg:"PostgreSQL connection attempt"; sid:1006;)
-alert tcp any any -> any any (flags:S; threshold:20,60; msg:"Possible SYN flood"; sid:2001;)
+alert tcp any any -> any any (flags:S; threshold:100,10; msg:"Possible SYN flood"; sid:2001;)
 alert udp any any -> any 53 (dns_query_len:>50; msg:"Possible DNS tunnelling"; sid:3001;)
-alert icmp any any -> any any (threshold:100,10; msg:"ICMP flood detected"; sid:4001;)

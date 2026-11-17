@@ -69,7 +69,8 @@ struct DNSHeader {
     uint16_t answers;
     uint16_t authority;
     uint16_t additional;
-    std::string query_name;
+    bool is_response = false;  // QR bit: false for a query, true for a response
+    std::string query_name;    // first question's name, dotted; empty if there is none
     uint16_t query_type;
 };
 

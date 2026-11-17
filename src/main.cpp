@@ -9,13 +9,7 @@
 #include "sentinelflow/capture/live_capture.hpp"
 #include "sentinelflow/capture/pcap_file_reader.hpp"
 #include "sentinelflow/detection/detection_engine.hpp"
-#include "sentinelflow/parser/arp_parser.hpp"
-#include "sentinelflow/parser/dns_parser.hpp"
-#include "sentinelflow/parser/ethernet_parser.hpp"
-#include "sentinelflow/parser/icmp_parser.hpp"
-#include "sentinelflow/parser/ip_parser.hpp"
-#include "sentinelflow/parser/tcp_parser.hpp"
-#include "sentinelflow/parser/udp_parser.hpp"
+#include "sentinelflow/pipeline/pipeline.hpp"
 #include "sentinelflow/stats/traffic_stats.hpp"
 #include "sentinelflow/utils/timestamp.hpp"
 
@@ -23,124 +17,12 @@ using namespace sf;
 
 static bool running = true;
 static bool verbose = false;
-static TrafficStats* g_stats = nullptr;
 static PacketCapture* g_capture = nullptr;
 
 void signal_handler(int) {
     running = false;
     if (g_capture)
         g_capture->stop();
-}
-
-void process_packet(const uint8_t* data, uint32_t length, std::chrono::system_clock::time_point ts,
-                    DetectionEngine& engine, AlertManager& alerts, TrafficStats& stats) {
-    ParsedPacket pkt;
-    pkt.timestamp = ts;
-    pkt.raw_data = data;
-    pkt.raw_length = length;
-    pkt.length = length;
-
-    // Layer 2: Ethernet
-    if (!parse_ethernet(data, length, pkt.ethernet))
-        return;
-
-    uint32_t offset = 14;
-
-    if (pkt.ethernet.ether_type == 0x0806 && length > offset) {
-        // ARP
-        ARPHeader arp;
-        if (parse_arp(data + offset, length - offset, arp)) {
-            pkt.arp = arp;
-        }
-    } else if (pkt.ethernet.ether_type == 0x0800 && length > offset) {
-        // IPv4
-        IPv4Header ip;
-        if (parse_ipv4(data + offset, length - offset, ip)) {
-            pkt.ipv4 = ip;
-            uint32_t ip_header_len = ip.ihl * 4;
-            offset += ip_header_len;
-
-            if (ip.protocol == 6 && length > offset) {
-                TCPHeader tcp;
-                if (parse_tcp(data + offset, length - offset, tcp)) {
-                    pkt.tcp = tcp;
-                    uint32_t tcp_header_len = tcp.data_offset * 4;
-                    if (offset + tcp_header_len < length) {
-                        pkt.payload = data + offset + tcp_header_len;
-                        pkt.payload_length = length - offset - tcp_header_len;
-                    }
-                }
-            } else if (ip.protocol == 17 && length > offset) {
-                UDPHeader udp;
-                if (parse_udp(data + offset, length - offset, udp)) {
-                    pkt.udp = udp;
-                    if (udp.src_port == 53 || udp.dst_port == 53) {
-                        uint32_t dns_offset = offset + 8;
-                        if (dns_offset < length) {
-                            DNSHeader dns;
-                            if (parse_dns(data + dns_offset, length - dns_offset, dns)) {
-                                pkt.dns = dns;
-                            }
-                        }
-                    }
-                    pkt.payload = data + offset + 8;
-                    pkt.payload_length = length - offset - 8;
-                }
-            } else if (ip.protocol == 1 && length > offset) {
-                ICMPHeader icmp;
-                if (parse_icmp(data + offset, length - offset, icmp)) {
-                    pkt.icmp = icmp;
-                }
-            }
-        }
-    }
-
-    stats.record(pkt);
-
-    // Verbose: print every packet
-    if (verbose && pkt.ipv4) {
-        std::cout << ip_to_string(pkt.ipv4->src_ip);
-        if (pkt.tcp)
-            std::cout << ":" << pkt.tcp->src_port;
-        else if (pkt.udp)
-            std::cout << ":" << pkt.udp->src_port;
-        std::cout << " -> " << ip_to_string(pkt.ipv4->dst_ip);
-        if (pkt.tcp)
-            std::cout << ":" << pkt.tcp->dst_port;
-        else if (pkt.udp)
-            std::cout << ":" << pkt.udp->dst_port;
-
-        if (pkt.tcp) {
-            std::cout << " [TCP";
-            if (pkt.tcp->flags & TCP_SYN)
-                std::cout << " SYN";
-            if (pkt.tcp->flags & TCP_ACK)
-                std::cout << " ACK";
-            if (pkt.tcp->flags & TCP_FIN)
-                std::cout << " FIN";
-            if (pkt.tcp->flags & TCP_RST)
-                std::cout << " RST";
-            if (pkt.tcp->flags & TCP_PSH)
-                std::cout << " PSH";
-            std::cout << "]";
-        } else if (pkt.udp) {
-            std::cout << " [UDP]";
-            if (pkt.dns)
-                std::cout << " DNS:" << pkt.dns->query_name;
-        } else if (pkt.icmp) {
-            std::cout << " [ICMP type=" << (int)pkt.icmp->type << "]";
-        }
-        std::cout << " len=" << length << std::endl;
-    } else if (verbose && pkt.arp) {
-        std::cout << ip_to_string(pkt.arp->sender_ip) << " -> " << ip_to_string(pkt.arp->target_ip)
-                  << " [ARP opcode=" << pkt.arp->opcode << "]" << std::endl;
-    }
-
-    // Run detection
-    auto detected = engine.analyze(pkt);
-    if (!detected.empty()) {
-        alerts.process(detected);
-    }
 }
 
 void print_usage(const char* prog) {
@@ -185,11 +67,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::cout << "=== SentinelFlow v1.0 ===" << std::endl;
+    std::cout << "=== SentinelFlow v" << SENTINELFLOW_VERSION << " ===" << std::endl;
 
     // Set up detection
     DetectionEngine engine;
-    engine.load_rules(rules_file);
+    auto rule_stats = engine.load_rules(rules_file);
+    std::cout << "Loaded " << rule_stats.loaded << " rules from " << rules_file;
+    if (rule_stats.rejected > 0)
+        std::cout << " (" << rule_stats.rejected << " rejected, see warnings above)";
+    std::cout << std::endl;
 
     // Set up alerting
     AlertManager alert_manager;
@@ -201,7 +87,6 @@ int main(int argc, char* argv[]) {
 
     // Set up stats
     TrafficStats stats;
-    g_stats = &stats;
 
     // Create capture source
     std::unique_ptr<PacketCapture> capture;
@@ -238,11 +123,18 @@ int main(int argc, char* argv[]) {
     capture->start(
         [&](const uint8_t* data, uint32_t length, std::chrono::system_clock::time_point ts) {
             if (running) {
-                process_packet(data, length, ts, engine, alert_manager, stats);
+                process_packet(data, length, ts, engine, alert_manager, stats, verbose);
             }
         });
 
     stats.print_summary();
+    const auto evictions = engine.state_evictions();
+    if (evictions.total() > 0) {
+        std::cout << "Warning: detector state tables were full and dropped " << evictions.total()
+                  << " tracked records (port scan " << evictions.port_scan << ", SYN flood "
+                  << evictions.syn_flood << ", DNS tunnel " << evictions.dns_tunnel
+                  << "); detection of slow or distributed activity was degraded" << std::endl;
+    }
     std::cout << "Total alerts: " << alert_manager.total_alerts() << std::endl;
 
     return 0;

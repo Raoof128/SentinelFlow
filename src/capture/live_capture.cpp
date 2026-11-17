@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "sentinelflow/capture/link_type.hpp"
+
 namespace sf {
 
 LiveCapture::LiveCapture(const std::string& interface, int snap_len)
@@ -17,6 +19,11 @@ bool LiveCapture::open() {
     handle_ = pcap_open_live(interface_.c_str(), snap_len_, 1, 1000, errbuf);
     if (!handle_) {
         std::cerr << "pcap_open_live failed: " << errbuf << std::endl;
+        return false;
+    }
+    if (!require_ethernet_link(handle_, interface_)) {
+        pcap_close(handle_);
+        handle_ = nullptr;
         return false;
     }
     return true;
