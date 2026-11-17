@@ -39,7 +39,7 @@ Two kinds of rule do not match packets one at a time. When the rules are loaded 
 | Rule | Detector | What the rule sets | Built-in default |
 |------|----------|--------------------|------------------|
 | `tcp` rule with `flags:S` and `threshold:count,seconds` | SYN flood (SID 5002) | SYNs to one destination within the window that raise an alert | 100 in 10 s |
-| any rule with `dns_query_len:>N` | DNS tunnel (SID 5003) | Name length that counts as long | 50 |
+| any rule with `dns_query_len:>N` | DNS tunnel (SID 5003) | Name length that counts as long (messages sent to port 53 are counted whatever their DNS QR bit says; replies from port 53 are ignored) | 50 |
 | the same rule, if it also has `threshold:count,seconds` | DNS tunnel (SID 5003) | Long queries from one source within the window | 20 in 60 s |
 
 The port-scan detector (SID 5001) has no rule; it always uses 15 distinct ports in 60 s.

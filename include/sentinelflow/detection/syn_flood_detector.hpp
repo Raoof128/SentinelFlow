@@ -27,6 +27,9 @@ public:
     /// Number of destinations currently tracked.
     std::size_t tracked_targets() const { return targets_.size(); }
 
+    /// Destinations dropped because the table was full (see SourceTable).
+    uint64_t capacity_evictions() const { return targets_.capacity_evictions(); }
+
 private:
     using TimePoint = std::chrono::system_clock::time_point;
 
@@ -34,6 +37,8 @@ private:
         std::deque<TimePoint> syns;  // newest syn_threshold SYNs inside the window
         bool alerted = false;
         TimePoint last_alert{};
+
+        std::size_t progress() const { return syns.size(); }
     };
 
     uint32_t threshold_;

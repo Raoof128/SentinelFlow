@@ -1,5 +1,6 @@
 #include "sentinelflow/detection/detection_engine.hpp"
 
+#include <algorithm>
 #include <iostream>
 
 #include "sentinelflow/detection/rule_parser.hpp"
@@ -90,6 +91,9 @@ std::vector<std::string> DetectionEngine::apply_rules(const std::vector<Rule>& r
     syn_flood_detector_ = SynFloodDetector(syn_threshold, syn_window);
     dns_tunnel_detector_ = DnsTunnelDetector(dns_length, dns_volume, dns_window);
     signature_matcher_ = std::make_unique<SignatureMatcher>(rules);
+    // Replacing the detectors reset their counters; the port-scan detector kept its own.
+    reported_evictions_ = state_evictions().total();
+    pressure_alerted_ = false;
     return warnings;
 }
 
@@ -112,7 +116,43 @@ std::vector<Alert> DetectionEngine::analyze(const ParsedPacket& pkt) {
     if (auto alert = dns_tunnel_detector_.check(pkt))
         alerts.push_back(std::move(*alert));
 
+    check_state_pressure(pkt, alerts);
+
     return alerts;
+}
+
+StateEvictions DetectionEngine::state_evictions() const {
+    StateEvictions ev;
+    ev.port_scan = port_scan_detector_.capacity_evictions();
+    ev.syn_flood = syn_flood_detector_.capacity_evictions();
+    ev.dns_tunnel = dns_tunnel_detector_.capacity_evictions();
+    return ev;
+}
+
+void DetectionEngine::check_state_pressure(const ParsedPacket& pkt, std::vector<Alert>& alerts) {
+    const StateEvictions ev = state_evictions();
+    if (ev.total() <= reported_evictions_)
+        return;
+
+    pressure_clock_ = std::max(pressure_clock_, pkt.timestamp);
+    if (pressure_alerted_ && pressure_clock_ - last_pressure_alert_ < kStatePressureAlertWindow)
+        return;  // rate limited: the next alert will count these too
+
+    Alert alert;
+    alert.sid = kStatePressureSid;
+    alert.severity = AlertSeverity::MEDIUM;
+    alert.timestamp = pkt.timestamp;
+    alert.message =
+        "State table pressure: " + std::to_string(ev.total() - reported_evictions_) +
+        " tracked records dropped at capacity since the last report (in all: port scan " +
+        std::to_string(ev.port_scan) + ", SYN flood " + std::to_string(ev.syn_flood) +
+        ", DNS tunnel " + std::to_string(ev.dns_tunnel) +
+        "); detection of slow or distributed activity is degraded";
+    alerts.push_back(std::move(alert));
+
+    reported_evictions_ = ev.total();
+    pressure_alerted_ = true;
+    last_pressure_alert_ = pressure_clock_;
 }
 
 }  // namespace sf

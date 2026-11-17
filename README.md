@@ -162,10 +162,10 @@ Real output from `./build/sentinelflow --pcap samples/port_scan.pcap` and `--pca
 |-----------|--------|----------|-------------|
 | Port Scan | Stateful | HIGH | Alerts when one source sends SYNs to 15 distinct ports on one destination within 60 s. Only ports whose latest SYN is inside the window count. The 15 and 60 are built-in constants; there is no rule for them |
 | SYN Flood | Stateful | CRITICAL | Counts SYNs per destination IP, from any sources, and alerts at the rule's `threshold:count,seconds` (default rules: 100 in 10 s). One alert per destination per window while a flood continues |
-| DNS Tunnel | Stateful | HIGH | Counts DNS queries (not responses) whose name is longer than the rule's `dns_query_len:>N` (default rules: 50 characters); alerts at 20 such queries from one source within 60 s |
+| DNS Tunnel | Stateful | HIGH | Counts DNS messages sent to port 53 (whatever their QR bit says; messages from port 53 to another port are replies and are ignored) whose name is longer than the rule's `dns_query_len:>N` (default rules: 50 characters); alerts at 20 such queries from one source within 60 s |
 | Signature Match | Rule-based | MEDIUM | Snort-inspired rules with protocol, address (IP or CIDR), port, flag and content matching, applied to each packet on its own |
 
-ICMP flood detection is not implemented.
+ICMP flood detection is not implemented. When a detector's state table is full and has to drop live records, the engine raises a MEDIUM "State table pressure" alert (SID 5100, at most one per minute) and the end-of-run summary reports the count, so the operator can see detection is degraded.
 
 ---
 
@@ -221,7 +221,7 @@ SentinelFlow is a study project, written to learn how an intrusion detection pip
 
 - **Port-scan thresholds are constants.** The port-scan detector always uses 15 ports in 60 s; no rule syntax configures it. Each stateful detector (SYN flood, DNS tunnel) takes its values from the first matching rule; a second rule for the same detector is ignored with a warning, and the address and port fields of those rules are not used (the detectors look at all traffic).
 - **ICMP flood is not detected.** There is no ICMP detector, so a `threshold` rule on ICMP is reported as having no effect; the default rules do not contain one.
-- **Tracked state is capped, not unlimited.** Each detector tracks at most 65,536 sources (or source and destination pairs) and drops the least recently active one when full, so an attacker who sends from more than 65,536 distinct sources inside a window can push other sources' state out and reset their counts.
+- **Tracked state is capped, and a cap can be attacked.** Each detector tracks at most 65,536 sources (or source and destination pairs). Records that have expired are dropped first. When the table is full of live records, the victim is the least advanced towards its alert threshold among the eight least recently active, so a source close to triggering outlives the single-packet records used to flush the table. That is a heuristic: an attacker who can spoof enough distinct sources can still fill the table, and one who makes more than eight records as advanced as the target can still push it out and reset its count. A bounded table cannot prevent this; it makes it expensive and visible, through the capacity-eviction counters, the SID 5100 alert and the end-of-run warning.
 - **Framing is partial.** Only Ethernet captures are accepted. VLAN tags are not handled (a tagged frame is counted but not parsed), IPv6 is not parsed, and fragments and TCP streams are not reassembled: a content rule sees one packet's payload at a time, and only the first fragment's transport header is read.
 - **DNS parsing is minimal.** Only the first question of a UDP message is read, DNS over TCP is not parsed, and a compression pointer in the name ends the name instead of being followed.
 - **Rules.** The `action` field is ignored (every matching rule alerts), and port ranges, negation and address lists are not supported. Rules with options the parser does not know are rejected.
@@ -229,7 +229,7 @@ SentinelFlow is a study project, written to learn how an intrusion detection pip
 
 ## Testing
 
-SentinelFlow includes 130 tests covering the parsers, rule parsing and signature matching, the three stateful detectors and their state limits, the pcap link-type check, and the pipeline end to end: raw Ethernet frames are built in memory, run through the library pipeline with a small rule set, and the alerts are asserted.
+SentinelFlow includes 146 tests covering the parsers, rule parsing and signature matching, the three stateful detectors and their state limits, the pcap link-type check, and the pipeline end to end: raw Ethernet frames are built in memory, run through the library pipeline with a small rule set, and the alerts are asserted.
 
 ```bash
 cmake -B build -DBUILD_TESTING=ON

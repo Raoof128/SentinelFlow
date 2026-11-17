@@ -13,7 +13,10 @@ DnsTunnelDetector::DnsTunnelDetector(uint32_t query_len_threshold, uint32_t volu
 std::optional<Alert> DnsTunnelDetector::check(const ParsedPacket& pkt) {
     if (!pkt.ipv4 || !pkt.dns)
         return std::nullopt;
-    if (pkt.dns->is_response)
+    // A server's reply: sent from port 53 to some other port. The QR bit is not consulted.
+    if (pkt.udp && pkt.udp->src_port == 53 && pkt.udp->dst_port != 53)
+        return std::nullopt;
+    if (pkt.tcp && pkt.tcp->src_port == 53 && pkt.tcp->dst_port != 53)
         return std::nullopt;
 
     // Check if query name is suspiciously long

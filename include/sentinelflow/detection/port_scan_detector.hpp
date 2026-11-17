@@ -28,6 +28,9 @@ public:
     /// Number of source/destination pairs currently tracked.
     std::size_t tracked_pairs() const { return pairs_.size(); }
 
+    /// Pairs dropped because the table was full (see SourceTable).
+    uint64_t capacity_evictions() const { return pairs_.capacity_evictions(); }
+
 private:
     using TimePoint = std::chrono::system_clock::time_point;
 
@@ -38,6 +41,8 @@ private:
     struct PairRecord {
         std::list<std::pair<uint16_t, TimePoint>> ports;
         std::unordered_map<uint16_t, std::list<std::pair<uint16_t, TimePoint>>::iterator> index;
+
+        std::size_t progress() const { return index.size(); }
     };
 
     static uint64_t make_key(IPv4Address src, IPv4Address dst);

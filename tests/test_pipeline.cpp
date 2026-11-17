@@ -117,11 +117,12 @@ std::vector<uint8_t> tcp_frame(IPv4Address src, IPv4Address dst, uint16_t dst_po
     return ipv4_frame(6, src, dst, tcp_segment(40000, dst_port, flags, payload), opts);
 }
 
+// `qr_response` is the DNS QR bit; `from_server` is the transport direction (53 -> 40000).
 std::vector<uint8_t> dns_frame(IPv4Address src, IPv4Address dst, const std::string& name,
-                               bool response) {
-    const auto msg = dns_message(name, response);
-    return response ? ipv4_frame(17, src, dst, udp_datagram(53, 40000, msg))
-                    : ipv4_frame(17, src, dst, udp_datagram(40000, 53, msg));
+                               bool qr_response, bool from_server) {
+    const auto msg = dns_message(name, qr_response);
+    return from_server ? ipv4_frame(17, src, dst, udp_datagram(53, 40000, msg))
+                       : ipv4_frame(17, src, dst, udp_datagram(40000, 53, msg));
 }
 
 // Collects every alert the pipeline raises.
@@ -389,10 +390,10 @@ TEST(PipelineTest, LongDnsQueriesRaiseATunnellingAlert) {
     ASSERT_GT(name.size(), 50u);
 
     for (int i = 0; i < 19; ++i)
-        harness.send(dns_frame(kClient, kResolver, name, false));
+        harness.send(dns_frame(kClient, kResolver, name, false, false));
     EXPECT_EQ(harness.count(5003), 0u);
 
-    harness.send(dns_frame(kClient, kResolver, name, false));
+    harness.send(dns_frame(kClient, kResolver, name, false, false));
     EXPECT_EQ(harness.count(5003), 1u);
     EXPECT_EQ(harness.stats().dns_count(), 20u);
 }
@@ -402,17 +403,28 @@ TEST(PipelineTest, DnsResponsesDoNotRaiseATunnellingAlert) {
     const std::string name = std::string(30, 'a') + "." + std::string(30, 'b') + ".example.com";
 
     for (int i = 0; i < 60; ++i)
-        harness.send(dns_frame(kResolver, kClient, name, true));
+        harness.send(dns_frame(kResolver, kClient, name, true, true));
 
     EXPECT_TRUE(harness.alerts().empty());
     EXPECT_EQ(harness.stats().dns_count(), 60u);
+}
+
+TEST(PipelineTest, QueriesThatSetTheResponseBitAreStillTunnelling) {
+    PipelineHarness harness(kRules);
+    const std::string name = std::string(30, 'a') + "." + std::string(30, 'b') + ".example.com";
+
+    // Sent to port 53 but with QR=1: the sender chose that bit, the transport says query.
+    for (int i = 0; i < 20; ++i)
+        harness.send(dns_frame(kClient, kResolver, name, true, false));
+
+    EXPECT_EQ(harness.count(5003), 1u);
 }
 
 TEST(PipelineTest, ShortDnsQueriesAreNotTunnelling) {
     PipelineHarness harness(kRules);
 
     for (int i = 0; i < 60; ++i)
-        harness.send(dns_frame(kClient, kResolver, "example.com", false));
+        harness.send(dns_frame(kClient, kResolver, "example.com", false, false));
 
     EXPECT_TRUE(harness.alerts().empty());
 }

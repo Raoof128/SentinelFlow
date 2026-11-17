@@ -147,3 +147,16 @@ TEST(SynFloodDetectorTest, ThresholdOfOneAlertsOncePerWindow) {
     EXPECT_FALSE(detector.check(syn_from(1, 2, t + std::chrono::seconds(5))).has_value());
     EXPECT_TRUE(detector.check(syn_from(1, 2, t + std::chrono::seconds(10))).has_value());
 }
+
+TEST(SynFloodDetectorTest, NearThresholdTargetSurvivesAFloodOfSingleSynTargets) {
+    SynFloodDetector detector(5, 10, /*max_tracked_targets=*/10);
+    auto t = std::chrono::system_clock::now();
+
+    for (uint32_t i = 0; i < 4; ++i)
+        detector.check(syn_from(1 + i, 0xC0A80101, t));
+    for (uint32_t dst = 1000; dst < 2000; ++dst)
+        detector.check(syn_from(1, dst, t));
+    EXPECT_GT(detector.capacity_evictions(), 900u);
+
+    EXPECT_TRUE(detector.check(syn_from(9, 0xC0A80101, t)).has_value());
+}

@@ -214,3 +214,63 @@ TEST(DetectionEngineRulesTest, DnsRuleOnAnotherPortWarns) {
     ASSERT_EQ(warnings.size(), 1u);
     EXPECT_NE(warnings[0].find("ignored"), std::string::npos);
 }
+
+TEST(DetectionEnginePressureTest, NoAlertWhileTablesHaveRoom) {
+    DetectionEngine engine;
+    const auto t = std::chrono::system_clock::now();
+    for (uint32_t src = 1; src <= 1000; ++src)
+        EXPECT_EQ(count_sid(engine.analyze(syn(src, 2, 80, t)), kStatePressureSid), 0);
+    EXPECT_EQ(engine.state_evictions().total(), 0u);
+}
+
+TEST(DetectionEnginePressureTest, FullTableRaisesOneRateLimitedAlertPerWindow) {
+    DetectionEngine engine;
+    const auto t = std::chrono::system_clock::now();
+
+    // Every source probes one port of one target, so each (source, target) pair is a record; the
+    // port-scan table holds kDefaultMaxTrackedSources of them and then starts dropping.
+    int alerts = 0;
+    Alert first;
+    for (uint32_t src = 1; src <= kDefaultMaxTrackedSources + 5000; ++src) {
+        for (const auto& a : engine.analyze(syn(src, 2, 80, t))) {
+            if (a.sid == kStatePressureSid) {
+                if (alerts == 0)
+                    first = a;
+                ++alerts;
+            }
+        }
+    }
+    EXPECT_EQ(alerts, 1);
+    EXPECT_EQ(first.severity, AlertSeverity::MEDIUM);
+    EXPECT_NE(first.message.find("State table pressure"), std::string::npos);
+    EXPECT_NE(first.message.find("degraded"), std::string::npos);
+    EXPECT_EQ(engine.state_evictions().port_scan, 5000u);
+    EXPECT_EQ(engine.state_evictions().syn_flood, 0u);
+
+    // Still full and still dropping, but inside the window: silent.
+    for (uint32_t src = 200000; src < 200100; ++src)
+        EXPECT_EQ(count_sid(engine.analyze(syn(src, 2, 80, t)), kStatePressureSid), 0);
+}
+
+TEST(DetectionEnginePressureTest, AlertsAgainOnceTheWindowHasPassedAndTheTableIsStillFull) {
+    DetectionEngine engine;
+    auto t = std::chrono::system_clock::now();
+
+    auto spray = [&](uint32_t first_src, uint32_t count) {
+        int alerts = 0;
+        for (uint32_t src = first_src; src < first_src + count; ++src)
+            alerts += count_sid(engine.analyze(syn(src, 2, 80, t)), kStatePressureSid);
+        return alerts;
+    };
+
+    EXPECT_EQ(spray(1, kDefaultMaxTrackedSources + 100), 1);
+
+    // 30 s later a full table's worth of new sources: still dropping, but inside the window.
+    t += std::chrono::seconds(30);
+    EXPECT_EQ(spray(1000000, kDefaultMaxTrackedSources), 0);
+
+    // 61 s after the first alert the oldest records have expired, the rest are live and the
+    // table is full again: new sources are dropped at capacity and the alert fires once more.
+    t += std::chrono::seconds(31);
+    EXPECT_EQ(spray(2000000, 200), 1);
+}

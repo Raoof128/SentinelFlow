@@ -181,3 +181,31 @@ TEST(PortScanDetectorTest, OutOfOrderTimestampsDoNotResurrectExpiredPorts) {
     detector.check(syn_to_port(1, 2, 2, t));
     EXPECT_TRUE(detector.check(syn_to_port(1, 2, 3, t)).has_value());
 }
+
+TEST(PortScanDetectorTest, NearThresholdPairSurvivesAFloodOfSingleProbeSources) {
+    // An attacker sprays spoofed sources to fill the table and push a slow scanner's state out.
+    // The scanner is the oldest record but the furthest advanced, so it must not be the victim.
+    PortScanDetector detector(5, 60, /*max_tracked_pairs=*/10);
+    auto t = std::chrono::system_clock::now();
+
+    for (uint16_t port = 1; port <= 4; ++port)
+        detector.check(syn_to_port(1, 2, port, t));
+    for (uint32_t src = 100; src < 1100; ++src)
+        detector.check(syn_to_port(src, 2, 80, t));
+    EXPECT_GT(detector.capacity_evictions(), 900u);
+
+    EXPECT_TRUE(detector.check(syn_to_port(1, 2, 5, t)).has_value());
+}
+
+TEST(PortScanDetectorTest, ExpiredPairsAreEvictedBeforeLiveOnesAtCapacity) {
+    PortScanDetector detector(5, 60, /*max_tracked_pairs=*/3);
+    auto t = std::chrono::system_clock::now();
+
+    detector.check(syn_to_port(1, 2, 1, t));
+    detector.check(syn_to_port(2, 2, 1, t));
+    detector.check(syn_to_port(3, 2, 1, t + std::chrono::seconds(50)));
+    detector.check(syn_to_port(4, 2, 1, t + std::chrono::seconds(61)));
+
+    EXPECT_EQ(detector.tracked_pairs(), 2u);       // pairs 3 and 4
+    EXPECT_EQ(detector.capacity_evictions(), 0u);  // the two dropped had expired
+}

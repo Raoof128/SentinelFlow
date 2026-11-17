@@ -80,3 +80,11 @@ Raouf:
 - Files: see CHANGELOG.md (new: source_table.hpp, pipeline.hpp/.cpp, link_type.hpp/.cpp, benchmark_pipeline.cpp, 5 test files)
 - Verification: 130/130 tests pass locally (30 before); 38 new tests confirmed failing on the unmodified sources first; clang-format 17 clean; ASan/UBSan clean; CI on the pull request
 - Follow-ups: ICMP flood detector; configurable port-scan thresholds; VLAN/IPv6 framing; fuzzing and a sanitizer CI job
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: Two detection bypasses found by a security review of the detector changes
+- Summary: DNS tunnel detector no longer trusts the sender-controlled QR bit (a message to port 53 is analysed whatever it claims; only a message from port 53 to another port is a reply); `SourceTable` counts capacity evictions, drops expired records first and picks the least advanced of the 8 oldest live records when full, `DetectionEngine` raises a rate-limited MEDIUM "State table pressure" alert (SID 5100) and `main` prints eviction totals; README Known Limitations says plainly that a bounded table is evadable by an attacker who can spoof enough sources
+- Files: see CHANGELOG.md (new: tests/test_source_table.cpp)
+- Verification: 146/146 tests pass locally; reverting each fix fails six new tests; clang-format 17 clean; ASan/UBSan clean; CI on the pull request
+- Follow-ups: non-heuristic protection against table flushing; tune the eviction group size

@@ -128,6 +128,13 @@ int main(int argc, char* argv[]) {
         });
 
     stats.print_summary();
+    const auto evictions = engine.state_evictions();
+    if (evictions.total() > 0) {
+        std::cout << "Warning: detector state tables were full and dropped " << evictions.total()
+                  << " tracked records (port scan " << evictions.port_scan << ", SYN flood "
+                  << evictions.syn_flood << ", DNS tunnel " << evictions.dns_tunnel
+                  << "); detection of slow or distributed activity was degraded" << std::endl;
+    }
     std::cout << "Total alerts: " << alert_manager.total_alerts() << std::endl;
 
     return 0;

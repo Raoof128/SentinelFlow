@@ -4,6 +4,16 @@
 
 Raouf:
 - **Date:** 2026-11-17 (AEDT)
+- **Scope:** Two detection bypasses found by a security review of the detector changes
+- **Summary:**
+  - **DNS tunnel detector trusted the QR bit.** It ignored any message whose DNS QR bit was set, but the sender controls that bit, so a client exfiltrating over DNS could set QR=1 on its queries and never be counted. A message is now a reply (and ignored) only if the transport says so: sent from port 53 to another port. A message sent to port 53 is analysed whatever its QR bit says. `DNSHeader::is_response` is still parsed and exposed but no detector relies on it.
+  - **A full state table could be flushed silently.** Evicting the least recently updated record let an attacker spray spoofed sources and push a slow scanner's state out. `SourceTable` now (a) counts capacity evictions (`capacity_evictions()` on the table and each detector, `DetectionEngine::state_evictions()`), (b) drops expired records first (idle records are evicted before every insert, so a full table holds live ones) and, when it must drop a live one, picks among the 8 least recently updated the record furthest from its alert threshold, ties to the oldest, at constant cost, and (c) `DetectionEngine::analyze()` raises one MEDIUM "State table pressure" alert (SID 5100) per minute of packet time while evictions occur, and `sentinelflow` prints the totals at the end of a run. This is a heuristic, not a defence: an attacker who can spoof enough sources can still fill the table, which the README Known Limitations now says plainly.
+- **Files changed:** `include/sentinelflow/detection/source_table.hpp`, the three detector headers, `src/detection/dns_tunnel_detector.cpp`, `detection_engine.{hpp,cpp}`, `src/main.cpp`, `tests/` (new `test_source_table.cpp`; DNS tunnel, port scan, SYN flood, engine and pipeline tests extended), README, `docs/`, CHANGELOG.md, AGENT.md
+- **Verification:** local build and `ctest` 146/146 (130 before); reverting either fix makes six of the new tests fail; clang-format 17 clean; AddressSanitizer and UBSan clean; the pipeline benchmark is unchanged (about 8.0 million packets/sec locally)
+- **Follow-ups:** a defence that is not heuristic would need per-source cost accounting or rate limiting upstream of the table; the eviction group size (8) is a guess, not tuned
+
+Raouf:
+- **Date:** 2026-11-17 (AEDT)
 - **Scope:** Detector correctness, rule handling, packet framing, end-to-end test and benchmark
 - **Summary:** A review found that the code did not do what the documentation said. Fixed, each with a test that failed before the change:
   - **Rule options were decorative.** `DetectionEngine` built the detectors with constants and `threshold:` / `dns_query_len:` in a rules file changed nothing. `DetectionEngine::apply_rules()` now passes the SYN-flood rule's threshold and window and the DNS rule's name length (and optional threshold) to the detectors, keeps the old constants as defaults, and warns about any `threshold` rule no detector can use. ICMP flood has no detector and the smaller correct change was to remove its rule from `rules/default.rules` and document it as not implemented. `default.rules` now says `threshold:100,10` for SYN flood, the value the code always used: `20,60` would have flagged the bundled benign `normal_traffic.pcap` (50 handshakes to one server in 50 s) as a flood.
