@@ -35,6 +35,10 @@ jobs:
         if: matrix.build_type == 'Release' && matrix.compiler == 'g++'
         run: ./build/bench/benchmark_throughput
 
+      - name: Run pipeline benchmark
+        if: matrix.build_type == 'Release' && matrix.compiler == 'g++'
+        run: ./build/bench/benchmark_pipeline
+
   format-check:
     runs-on: ubuntu-latest
     steps:
