@@ -13,6 +13,7 @@ find_path(PCAP_INCLUDE_DIR pcap.h REQUIRED)
 file(GLOB_RECURSE LIB_SOURCES
     src/capture/*.cpp
     src/parser/*.cpp
+    src/pipeline/*.cpp
     src/detection/*.cpp
     src/alert/*.cpp
     src/stats/*.cpp
@@ -26,6 +27,7 @@ target_link_libraries(sentinelflow_lib ${PCAP_LIBRARY})
 # Main executable
 add_executable(sentinelflow src/main.cpp)
 target_link_libraries(sentinelflow sentinelflow_lib)
+target_compile_definitions(sentinelflow PRIVATE SENTINELFLOW_VERSION="${PROJECT_VERSION}")
 
 # Tests (optional, controlled by BUILD_TESTING)
 option(BUILD_TESTING "Build tests" ON)
