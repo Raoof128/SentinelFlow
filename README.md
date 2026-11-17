@@ -202,7 +202,7 @@ Result on the author's machine (Apple M2, macOS, Apple clang 21, Release build, 
 | Throughput | about 8,300,000 packets/sec |
 | Avg latency | 0.12 us/packet |
 
-This is a measure of the pipeline code on synthetic traffic, in memory. It leaves out libpcap, the network card, disk and console I/O, and real traffic differs from this mix, so it is a yardstick for comparing changes and not a statement of capacity. The CI job prints the same benchmark from a shared runner on every Release g++ build, which will give a different number.
+This is a measure of the pipeline code on synthetic traffic, in memory. It leaves out libpcap, the network card, disk and console I/O, and real traffic differs from this mix, so it is a yardstick for comparing changes and not a statement of capacity. The CI job prints the same benchmark on every Release g++ build, on a shared GitHub-hosted runner (the pull request that added it printed 7,779,522 packets/sec on one run and 4,250,673 on an earlier run of the same code, so shared-runner figures vary by almost a factor of two). Treat any single number, including the one above, as indicative.
 
 Run them yourself:
 
