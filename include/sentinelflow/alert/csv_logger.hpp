@@ -1,7 +1,8 @@
 #pragma once
-#include "sentinelflow/alert/alert_manager.hpp"
 #include <fstream>
 #include <string>
+
+#include "sentinelflow/alert/alert_manager.hpp"
 
 namespace sf {
 
@@ -16,4 +17,4 @@ private:
     std::ofstream file_;
 };
 
-} // namespace sf
+}  // namespace sf

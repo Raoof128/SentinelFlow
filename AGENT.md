@@ -47,3 +47,11 @@ Raouf:
 - Files: 20+ files added/modified (see CHANGELOG.md for full list)
 - Verification: 27/27 tests pass, clean build, zero warnings
 - Follow-ups: Consider adding compiler warning flags (-Wall -Wextra -Wpedantic) to CMakeLists.txt
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: CI — formatting and the static-analysis job
+- Summary: Ran clang-format 17 with the repository .clang-format across include/, src/, tests/ and bench/ so the format-check job passes; gave the advisory clang-tidy step per-file and step time limits so it no longer runs to the six-hour job limit; no behaviour change
+- Files: 60 .cpp/.hpp files, .github/workflows/ci.yml, CHANGELOG.md, AGENT.md
+- Verification: all six CI jobs pass on the pull request; 27/27 tests pass locally
+- Follow-ups: .clang-tidy naming options use camelCase, which clang-tidy 17 rejects (expects camelBack); nodiscard and brace findings remain advisory

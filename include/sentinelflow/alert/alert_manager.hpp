@@ -1,8 +1,9 @@
 #pragma once
-#include "sentinelflow/alert/alert.hpp"
-#include <vector>
-#include <memory>
 #include <functional>
+#include <memory>
+#include <vector>
+
+#include "sentinelflow/alert/alert.hpp"
 
 namespace sf {
 
@@ -24,4 +25,4 @@ private:
     uint64_t total_alerts_ = 0;
 };
 
-} // namespace sf
+}  // namespace sf

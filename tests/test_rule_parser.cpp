@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "sentinelflow/detection/rule_parser.hpp"
 #include "sentinelflow/parser/packet.hpp"
 
@@ -17,8 +18,8 @@ TEST(RuleParserTest, ParsesBasicRule) {
 }
 
 TEST(RuleParserTest, ParsesFlags) {
-    auto rule = RuleParser::parse_line(
-        R"(alert tcp any any -> any any (flags:S; msg:"SYN"; sid:2001;))");
+    auto rule =
+        RuleParser::parse_line(R"(alert tcp any any -> any any (flags:S; msg:"SYN"; sid:2001;))");
     ASSERT_TRUE(rule.has_value());
     ASSERT_TRUE(rule->tcp_flags.has_value());
     EXPECT_EQ(*rule->tcp_flags, TCP_SYN);

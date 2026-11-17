@@ -1,13 +1,13 @@
 #pragma once
+#include <chrono>
 #include <cstdint>
 #include <functional>
-#include <chrono>
 #include <string>
 
 namespace sf {
 
-using PacketCallback = std::function<void(const uint8_t*, uint32_t,
-                                          std::chrono::system_clock::time_point)>;
+using PacketCallback =
+    std::function<void(const uint8_t*, uint32_t, std::chrono::system_clock::time_point)>;
 
 class PacketCapture {
 public:
@@ -18,4 +18,4 @@ public:
     virtual void stop() = 0;
 };
 
-} // namespace sf
+}  // namespace sf

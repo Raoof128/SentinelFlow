@@ -3,4 +3,4 @@
 
 namespace sf {
 bool parse_icmp(const uint8_t* data, uint32_t length, ICMPHeader& header);
-} // namespace sf
+}  // namespace sf

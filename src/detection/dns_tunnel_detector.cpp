@@ -2,15 +2,14 @@
 
 namespace sf {
 
-DnsTunnelDetector::DnsTunnelDetector(uint32_t query_len_threshold,
-                                     uint32_t volume_threshold,
+DnsTunnelDetector::DnsTunnelDetector(uint32_t query_len_threshold, uint32_t volume_threshold,
                                      uint32_t time_window_sec)
-    : query_len_threshold_(query_len_threshold),
-      volume_threshold_(volume_threshold),
+    : query_len_threshold_(query_len_threshold), volume_threshold_(volume_threshold),
       window_(std::chrono::seconds(time_window_sec)) {}
 
 std::optional<Alert> DnsTunnelDetector::check(const ParsedPacket& pkt) {
-    if (!pkt.ipv4 || !pkt.dns) return std::nullopt;
+    if (!pkt.ipv4 || !pkt.dns)
+        return std::nullopt;
 
     // Check if query name is suspiciously long
     if (pkt.dns->query_name.length() <= query_len_threshold_)
@@ -29,15 +28,14 @@ std::optional<Alert> DnsTunnelDetector::check(const ParsedPacket& pkt) {
 
     if (queries.size() >= volume_threshold_) {
         Alert alert;
-        alert.severity  = AlertSeverity::HIGH;
+        alert.severity = AlertSeverity::HIGH;
         alert.timestamp = now;
-        alert.src_ip    = src;
-        alert.dst_ip    = pkt.ipv4->dst_ip;
-        alert.message   = "Possible DNS tunnelling: " +
-                          std::to_string(queries.size()) +
-                          " long DNS queries in " +
-                          std::to_string(window_.count()) + "s from same source";
-        alert.sid       = 5003;
+        alert.src_ip = src;
+        alert.dst_ip = pkt.ipv4->dst_ip;
+        alert.message = "Possible DNS tunnelling: " + std::to_string(queries.size()) +
+                        " long DNS queries in " + std::to_string(window_.count()) +
+                        "s from same source";
+        alert.sid = 5003;
 
         queries.clear();
         return alert;
@@ -46,4 +44,4 @@ std::optional<Alert> DnsTunnelDetector::check(const ParsedPacket& pkt) {
     return std::nullopt;
 }
 
-} // namespace sf
+}  // namespace sf

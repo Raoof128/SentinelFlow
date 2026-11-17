@@ -1,12 +1,11 @@
 #include "sentinelflow/detection/detection_engine.hpp"
+
 #include "sentinelflow/detection/rule_parser.hpp"
 
 namespace sf {
 
 DetectionEngine::DetectionEngine()
-    : port_scan_detector_(15, 60),
-      syn_flood_detector_(100, 10),
-      dns_tunnel_detector_(50, 20, 60) {}
+    : port_scan_detector_(15, 60), syn_flood_detector_(100, 10), dns_tunnel_detector_(50, 20, 60) {}
 
 void DetectionEngine::load_rules(const std::string& rules_file) {
     auto rules = RuleParser::load_from_file(rules_file);
@@ -35,4 +34,4 @@ std::vector<Alert> DetectionEngine::analyze(const ParsedPacket& pkt) {
     return alerts;
 }
 
-} // namespace sf
+}  // namespace sf

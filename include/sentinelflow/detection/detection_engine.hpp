@@ -1,12 +1,13 @@
 #pragma once
-#include "sentinelflow/detection/signature_matcher.hpp"
-#include "sentinelflow/detection/port_scan_detector.hpp"
-#include "sentinelflow/detection/syn_flood_detector.hpp"
-#include "sentinelflow/detection/dns_tunnel_detector.hpp"
-#include "sentinelflow/alert/alert.hpp"
-#include "sentinelflow/parser/packet.hpp"
-#include <vector>
 #include <memory>
+#include <vector>
+
+#include "sentinelflow/alert/alert.hpp"
+#include "sentinelflow/detection/dns_tunnel_detector.hpp"
+#include "sentinelflow/detection/port_scan_detector.hpp"
+#include "sentinelflow/detection/signature_matcher.hpp"
+#include "sentinelflow/detection/syn_flood_detector.hpp"
+#include "sentinelflow/parser/packet.hpp"
 
 namespace sf {
 
@@ -24,4 +25,4 @@ private:
     DnsTunnelDetector dns_tunnel_detector_;
 };
 
-} // namespace sf
+}  // namespace sf

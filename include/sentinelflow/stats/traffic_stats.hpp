@@ -1,8 +1,9 @@
 #pragma once
-#include "sentinelflow/parser/packet.hpp"
 #include <atomic>
 #include <chrono>
 #include <string>
+
+#include "sentinelflow/parser/packet.hpp"
 
 namespace sf {
 
@@ -33,4 +34,4 @@ private:
     std::chrono::system_clock::time_point start_time_;
 };
 
-} // namespace sf
+}  // namespace sf

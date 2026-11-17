@@ -1,8 +1,9 @@
 #include "sentinelflow/detection/rule_parser.hpp"
+
 #include <fstream>
-#include <sstream>
 #include <iostream>
 #include <regex>
+#include <sstream>
 #include <stdexcept>
 
 namespace sf {
@@ -18,7 +19,8 @@ std::vector<Rule> RuleParser::load_from_file(const std::string& filepath) {
     std::string line;
     while (std::getline(file, line)) {
         // Skip comments and empty lines
-        if (line.empty() || line[0] == '#') continue;
+        if (line.empty() || line[0] == '#')
+            continue;
 
         auto rule = parse_line(line);
         if (rule) {
@@ -34,12 +36,13 @@ std::optional<Rule> RuleParser::parse_line(const std::string& line) {
     Rule rule{};
 
     std::string arrow;
-    if (!(iss >> rule.action >> rule.protocol >> rule.src_ip >> rule.src_port
-              >> arrow >> rule.dst_ip >> rule.dst_port)) {
+    if (!(iss >> rule.action >> rule.protocol >> rule.src_ip >> rule.src_port >> arrow >>
+          rule.dst_ip >> rule.dst_port)) {
         return std::nullopt;
     }
 
-    if (arrow != "->") return std::nullopt;
+    if (arrow != "->")
+        return std::nullopt;
 
     // Parse options in parentheses
     std::string rest;
@@ -58,7 +61,8 @@ std::optional<Rule> RuleParser::parse_line(const std::string& line) {
     while (std::getline(opt_stream, option, ';')) {
         // Trim whitespace
         auto start = option.find_first_not_of(" \t");
-        if (start == std::string::npos) continue;
+        if (start == std::string::npos)
+            continue;
         option = option.substr(start);
 
         if (option.substr(0, 4) == "msg:") {
@@ -79,12 +83,24 @@ std::optional<Rule> RuleParser::parse_line(const std::string& line) {
             uint8_t flags = 0;
             for (char c : flags_str) {
                 switch (c) {
-                    case 'S': flags |= 0x02; break; // SYN
-                    case 'A': flags |= 0x10; break; // ACK
-                    case 'F': flags |= 0x01; break; // FIN
-                    case 'R': flags |= 0x04; break; // RST
-                    case 'P': flags |= 0x08; break; // PSH
-                    case 'U': flags |= 0x20; break; // URG
+                    case 'S':
+                        flags |= 0x02;
+                        break;  // SYN
+                    case 'A':
+                        flags |= 0x10;
+                        break;  // ACK
+                    case 'F':
+                        flags |= 0x01;
+                        break;  // FIN
+                    case 'R':
+                        flags |= 0x04;
+                        break;  // RST
+                    case 'P':
+                        flags |= 0x08;
+                        break;  // PSH
+                    case 'U':
+                        flags |= 0x20;
+                        break;  // URG
                 }
             }
             rule.tcp_flags = flags;
@@ -119,4 +135,4 @@ std::optional<Rule> RuleParser::parse_line(const std::string& line) {
     return rule;
 }
 
-} // namespace sf
+}  // namespace sf

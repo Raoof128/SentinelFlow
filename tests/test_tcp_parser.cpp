@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "sentinelflow/parser/tcp_parser.hpp"
 
 using namespace sf;
@@ -6,9 +7,11 @@ using namespace sf;
 TEST(TCPParserTest, ParsesValidSegment) {
     uint8_t data[20] = {};
     // src port = 8080
-    data[0] = 0x1F; data[1] = 0x90;
+    data[0] = 0x1F;
+    data[1] = 0x90;
     // dst port = 80
-    data[2] = 0x00; data[3] = 0x50;
+    data[2] = 0x00;
+    data[3] = 0x50;
     // data offset = 5 (20 bytes), flags = SYN
     data[12] = 0x50;
     data[13] = 0x02;
