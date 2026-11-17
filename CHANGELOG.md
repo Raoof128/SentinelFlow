@@ -4,6 +4,14 @@
 
 Raouf:
 - **Date:** 2026-11-17 (AEDT)
+- **Scope:** Parser field reads; README accuracy
+- **Summary:** Every parser read 16- and 32-bit header fields by casting the packet pointer (`*reinterpret_cast<const uint16_t*>(data + n)`), which is an unaligned load and a strict-aliasing violation. They now go through `read_be16` / `read_be32` in `include/sentinelflow/utils/byte_order.hpp`, which copy the bytes out. The README claimed "zero-copy header extraction", which was not true, and quoted the parsing benchmark without saying that it covers header parsing of one fixed packet only; both are corrected.
+- **Files changed:** `include/sentinelflow/utils/byte_order.hpp` (new), `src/parser/*.cpp`, `README.md`, `CHANGELOG.md`, `AGENT.md`
+- **Verification:** local build and `ctest` 27/27; `clang-format-17 --dry-run --Werror` clean; CI on the pull request
+- **Follow-ups:** add an end-to-end benchmark that runs the detection engine over a pcap
+
+Raouf:
+- **Date:** 2026-11-17 (AEDT)
 - **Scope:** CI — formatting and the static-analysis job
 - **Summary:** Ran `clang-format` 17 with the repository `.clang-format` over `include/`, `src/`, `tests/` and `bench/` so the `format-check` CI job passes (whitespace, line wrapping and include order only). The advisory `static-analysis` job used to run until the six-hour limit and get cancelled; each file now runs clang-tidy under `timeout 180` and the step under a 20-minute limit. No behaviour change.
 - **Files changed:** 60 `.cpp`/`.hpp` files, .github/workflows/ci.yml, CHANGELOG.md, AGENT.md

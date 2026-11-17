@@ -36,7 +36,7 @@ SentinelFlow captures live network traffic or replays pcap files, parses protoco
 
 **Parsing**
 - Layered protocol dissection: Ethernet, IPv4, TCP, UDP, ICMP, DNS, ARP
-- Zero-copy header extraction for minimal overhead
+- Bounds-checked header parsing into plain structs, with alignment-safe field reads
 
 **Detection**
 - Snort-inspired configurable rule engine with signature matching
@@ -48,8 +48,7 @@ SentinelFlow captures live network traffic or replays pcap files, parses protoco
 - CSV log export for integration with SIEM tools
 
 **Performance**
-- 28M+ packets/second parsing throughput (benchmarked)
-- Sub-microsecond per-packet processing latency
+- Header parsing benchmarked on a single thread (see [Performance](#performance) for what the figure does and does not cover)
 
 ---
 
@@ -177,7 +176,7 @@ See [docs/rules_format.md](docs/rules_format.md) for the full syntax reference.
 
 ## Performance
 
-Benchmark results from `benchmark_throughput` (single-threaded, synthetic packets):
+Benchmark results from `benchmark_throughput`. It parses one fixed 54-byte TCP packet 5,000,000 times on a single thread: Ethernet, IPv4 and TCP header parsing only. It does not exercise capture, DNS parsing, the rule engine or the stateful detectors, so the figure is an upper bound on parser speed and not an end-to-end detection rate. The numbers below were recorded once on the author's machine; CI prints its own on every run.
 
 | Metric | Value |
 |--------|-------|

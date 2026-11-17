@@ -2,17 +2,19 @@
 
 #include <arpa/inet.h>
 
+#include "sentinelflow/utils/byte_order.hpp"
+
 namespace sf {
 
 bool parse_dns(const uint8_t* data, uint32_t length, DNSHeader& header) {
     if (length < 12)
         return false;
-    header.transaction_id = ntohs(*reinterpret_cast<const uint16_t*>(data));
-    header.flags = ntohs(*reinterpret_cast<const uint16_t*>(data + 2));
-    header.questions = ntohs(*reinterpret_cast<const uint16_t*>(data + 4));
-    header.answers = ntohs(*reinterpret_cast<const uint16_t*>(data + 6));
-    header.authority = ntohs(*reinterpret_cast<const uint16_t*>(data + 8));
-    header.additional = ntohs(*reinterpret_cast<const uint16_t*>(data + 10));
+    header.transaction_id = read_be16(data);
+    header.flags = read_be16(data + 2);
+    header.questions = read_be16(data + 4);
+    header.answers = read_be16(data + 6);
+    header.authority = read_be16(data + 8);
+    header.additional = read_be16(data + 10);
 
     // Parse query name (DNS label format)
     header.query_name.clear();
@@ -33,7 +35,7 @@ bool parse_dns(const uint8_t* data, uint32_t length, DNSHeader& header) {
 
     // Query type
     if (offset + 2 <= length) {
-        header.query_type = ntohs(*reinterpret_cast<const uint16_t*>(data + offset));
+        header.query_type = read_be16(data + offset);
     } else {
         header.query_type = 0;
     }
