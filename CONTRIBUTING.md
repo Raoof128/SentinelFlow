@@ -53,7 +53,7 @@ have considered.
 
 | Dependency | Minimum Version |
 |---|---|
-| CMake | 3.16+ |
+| CMake | 3.18+ |
 | C++ compiler | C++17 support (GCC 9+, Clang 10+, MSVC 19.14+) |
 | libpcap | libpcap-dev / libpcap-devel |
 

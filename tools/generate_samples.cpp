@@ -1,6 +1,6 @@
 // Tool to generate sample .pcap files for testing
-// Compile: g++ -std=c++17 -o generate_samples tools/generate_samples.cpp
-// Run:     ./generate_samples
+// Build:   cmake -B build && cmake --build build   (target: generate_samples)
+// Run:     ./build/generate_samples   (from the repository root; it writes samples/*.pcap)
 
 #include <cstdint>
 #include <cstring>
@@ -145,7 +145,7 @@ std::vector<uint8_t> make_icmp_packet(uint32_t src_ip, uint32_t dst_ip) {
 }
 
 int main() {
-    uint32_t base_time = 1711000000;
+    uint32_t base_time = 1774051200;  // 2026-03-21 00:00:00 UTC, fixed so the files are reproducible
 
     // === normal_traffic.pcap ===
     {
