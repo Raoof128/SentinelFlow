@@ -20,6 +20,7 @@ SentinelFlow captures live network traffic or replays pcap files, parses protoco
 - [Detection Capabilities](#detection-capabilities)
 - [Rules Format](#rules-format)
 - [Performance](#performance)
+- [Known Limitations](#known-limitations)
 - [Testing](#testing)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
@@ -194,9 +195,21 @@ cmake --build build -j$(nproc)
 
 ---
 
+## Known Limitations
+
+SentinelFlow is a study project, written to learn how an intrusion detection pipeline fits together. A review in November 2026 listed what it does not yet do, and nothing here should be read as production-ready:
+
+- **Detector thresholds are fixed in code.** `DetectionEngine` constructs the port-scan, SYN-flood and DNS-tunnel detectors with constants. The `threshold:` and `dns_query_len:` options in a rules file are parsed but not passed to the detectors, so editing them changes nothing, and the ICMP flood rule in `rules/default.rules` has no detector behind it.
+- **Per-source state is never evicted.** The stateful detectors keep an entry for every source they see. A stream of spoofed sources would grow memory without bound.
+- **The port-scan window is approximate.** Ports are forgotten only when every timestamp for a source has expired, so a slow, steady sender can accumulate ports across windows.
+- **Packet framing is simplified.** IPv4 total length and fragmentation are ignored, VLAN tags are not handled, and the pcap link type is assumed to be Ethernet.
+- **DNS parsing is minimal.** There is no handling of name compression and no cap on label length, and responses are not distinguished from queries.
+- **Rules.** CIDR addresses in rules are not supported, malformed lines are skipped silently, and the `action` field is ignored.
+- **Tests and benchmark.** The 30 tests cover the parsers and detectors separately; there is no test that drives a capture through the whole pipeline, and no fuzzing. The benchmark measures header parsing only (see [Performance](#performance)).
+
 ## Testing
 
-SentinelFlow includes 27 unit and integration tests covering parsers, detectors, rule parsing, and end-to-end packet processing.
+SentinelFlow includes 30 tests covering the parsers, the detectors, rule parsing and signature matching. They exercise the components separately; no test drives a capture through the whole pipeline.
 
 ```bash
 cmake -B build -DBUILD_TESTING=ON

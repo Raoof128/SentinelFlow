@@ -4,6 +4,14 @@
 
 Raouf:
 - **Date:** 2026-11-17 (AEDT)
+- **Scope:** Signature matching bug; README known limitations
+- **Summary:** A rule with a `content:` option matched any packet that carried no payload, because the content check was skipped when the payload was empty. A rule such as `content:"GET /admin"` on port 80 therefore alerted on every bare SYN to that port. The check now fails for payload-less packets and compares through a `string_view` without copying. The README gains a "Known Limitations" section from a review of the detection code: thresholds fixed in code and rule options not applied, per-source state never evicted, an approximate port-scan window, simplified framing, minimal DNS parsing, and no end-to-end test.
+- **Files changed:** `src/detection/signature_matcher.cpp`, `tests/test_signature_matcher.cpp`, `README.md`, `CHANGELOG.md`, `AGENT.md`
+- **Verification:** three new tests (content rule with no payload, with a matching payload, with another payload); local build and `ctest` 30/30; clang-format 17 clean
+- **Follow-ups:** wire rule thresholds through to the detectors; evict idle per-source state; an end-to-end benchmark and test through `DetectionEngine`
+
+Raouf:
+- **Date:** 2026-11-17 (AEDT)
 - **Scope:** Parser field reads; README accuracy
 - **Summary:** Every parser read 16- and 32-bit header fields by casting the packet pointer (`*reinterpret_cast<const uint16_t*>(data + n)`), which is an unaligned load and a strict-aliasing violation. They now go through `read_be16` / `read_be32` in `include/sentinelflow/utils/byte_order.hpp`, which copy the bytes out. The README claimed "zero-copy header extraction", which was not true, and quoted the parsing benchmark without saying that it covers header parsing of one fixed packet only; both are corrected.
 - **Files changed:** `include/sentinelflow/utils/byte_order.hpp` (new), `src/parser/*.cpp`, `README.md`, `CHANGELOG.md`, `AGENT.md`

@@ -63,3 +63,11 @@ Raouf:
 - Files: include/sentinelflow/utils/byte_order.hpp (new), src/parser/*.cpp, README.md, CHANGELOG.md, AGENT.md
 - Verification: 27/27 tests pass locally; clang-format 17 clean
 - Follow-ups: end-to-end benchmark over a pcap
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: Signature matching bug; README known limitations
+- Summary: Content rules no longer match packets with no payload (they did, alerting on every bare SYN to the rule's port); README lists the detection code's known limitations
+- Files: src/detection/signature_matcher.cpp, tests/test_signature_matcher.cpp, README.md, CHANGELOG.md, AGENT.md
+- Verification: 30/30 tests pass locally (3 new); clang-format 17 clean
+- Follow-ups: wire rule thresholds to the detectors; evict idle per-source state; end-to-end test and benchmark

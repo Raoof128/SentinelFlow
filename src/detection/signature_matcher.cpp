@@ -1,6 +1,7 @@
 #include "sentinelflow/detection/signature_matcher.hpp"
 
 #include <algorithm>
+#include <string_view>
 
 #include "sentinelflow/utils/ip_utils.hpp"
 
@@ -74,10 +75,12 @@ bool SignatureMatcher::matches_rule(const ParsedPacket& pkt, const Rule& rule) c
             return false;
     }
 
-    // Check content match
-    if (rule.content && pkt.payload && pkt.payload_length > 0) {
-        std::string payload_str(reinterpret_cast<const char*>(pkt.payload), pkt.payload_length);
-        if (payload_str.find(*rule.content) == std::string::npos)
+    // Check content match. A content rule cannot match a packet that carries no payload.
+    if (rule.content) {
+        if (!pkt.payload || pkt.payload_length == 0)
+            return false;
+        std::string_view payload(reinterpret_cast<const char*>(pkt.payload), pkt.payload_length);
+        if (payload.find(*rule.content) == std::string_view::npos)
             return false;
     }
 
