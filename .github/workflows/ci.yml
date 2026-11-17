@@ -62,7 +62,19 @@ jobs:
       - name: Configure with compile commands
         run: cmake -B build -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTING=OFF
 
-      - name: Run clang-tidy
+      # Advisory: findings are reported as annotations and do not fail the job.
+      # Each file gets its own time limit so one slow translation unit cannot stall the job.
+      - name: Run clang-tidy (advisory)
+        timeout-minutes: 20
         run: |
-          find src include -name '*.cpp' | head -20 | \
-            xargs clang-tidy-17 -p build --warnings-as-errors='bugprone-*,clang-analyzer-*' 2>&1 || true
+          for f in $(find src -name '*.cpp' | sort); do
+            echo "::group::clang-tidy $f"
+            rc=0
+            timeout 180 clang-tidy-17 -p build --quiet "$f" 2>&1 || rc=$?
+            echo "::endgroup::"
+            if [ "$rc" -eq 124 ]; then
+              echo "::warning file=$f::clang-tidy timed out after 180 s"
+            elif [ "$rc" -ne 0 ]; then
+              echo "::notice file=$f::clang-tidy exited with $rc"
+            fi
+          done
