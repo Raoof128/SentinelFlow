@@ -61,3 +61,123 @@ TEST(PortScanDetectorTest, IgnoresSYNACK) {
 
     EXPECT_FALSE(detector.check(pkt).has_value());
 }
+
+namespace {
+
+ParsedPacket syn_to_port(IPv4Address src, IPv4Address dst, uint16_t port,
+                         std::chrono::system_clock::time_point ts) {
+    ParsedPacket pkt;
+    pkt.timestamp = ts;
+    pkt.ipv4 = IPv4Header{};
+    pkt.ipv4->src_ip = src;
+    pkt.ipv4->dst_ip = dst;
+    pkt.tcp = TCPHeader{};
+    pkt.tcp->dst_port = port;
+    pkt.tcp->flags = TCP_SYN;
+    return pkt;
+}
+
+}  // namespace
+
+TEST(PortScanDetectorTest, SlowSenderDoesNotAccumulatePortsAcrossWindows) {
+    // One SYN every 50 s to a new port, with a 60 s window: at most two ports are ever inside
+    // the window. The old detector only cleared its port set when every timestamp had expired,
+    // which never happens at this rate, so it alerted on the fifth port.
+    PortScanDetector detector(5, 60);
+    auto t = std::chrono::system_clock::now();
+
+    for (uint16_t port = 1; port <= 40; ++port) {
+        EXPECT_FALSE(detector.check(syn_to_port(0xC0A80101, 0xC0A80102, port, t)).has_value())
+            << "alert on port " << port;
+        t += std::chrono::seconds(50);
+    }
+}
+
+TEST(PortScanDetectorTest, PortsSeenOutsideTheWindowAreNotCounted) {
+    PortScanDetector detector(5, 60);
+    auto t = std::chrono::system_clock::now();
+
+    for (uint16_t port = 1; port <= 4; ++port)
+        EXPECT_FALSE(detector.check(syn_to_port(1, 2, port, t)).has_value());
+
+    // Fifth distinct port, but the first four are 61 s old.
+    EXPECT_FALSE(detector.check(syn_to_port(1, 2, 5, t + std::chrono::seconds(61))).has_value());
+}
+
+TEST(PortScanDetectorTest, PortsInsideTheWindowStillCountWhenOldOnesExpire) {
+    PortScanDetector detector(4, 60);
+    auto t = std::chrono::system_clock::now();
+
+    EXPECT_FALSE(detector.check(syn_to_port(1, 2, 1, t)).has_value());
+    EXPECT_FALSE(detector.check(syn_to_port(1, 2, 2, t + std::chrono::seconds(30))).has_value());
+    EXPECT_FALSE(detector.check(syn_to_port(1, 2, 3, t + std::chrono::seconds(70))).has_value());
+    // Ports 2 and 3 are still inside the window; 1 has expired. 4 and 5 make four live ports.
+    EXPECT_FALSE(detector.check(syn_to_port(1, 2, 4, t + std::chrono::seconds(71))).has_value());
+    EXPECT_TRUE(detector.check(syn_to_port(1, 2, 5, t + std::chrono::seconds(72))).has_value());
+}
+
+TEST(PortScanDetectorTest, RepeatedSynsToOnePortAreOnePort) {
+    PortScanDetector detector(3, 60);
+    auto t = std::chrono::system_clock::now();
+
+    for (int i = 0; i < 50; ++i)
+        EXPECT_FALSE(detector.check(syn_to_port(1, 2, 80, t)).has_value());
+}
+
+TEST(PortScanDetectorTest, IdlePairsAreEvicted) {
+    PortScanDetector detector(5, 60);
+    auto t = std::chrono::system_clock::now();
+
+    for (uint32_t src = 1; src <= 100; ++src)
+        detector.check(syn_to_port(src, 2, 80, t));
+    EXPECT_EQ(detector.tracked_pairs(), 100u);
+
+    // One SYN from a new source after the window: the 100 idle pairs are gone.
+    detector.check(syn_to_port(1000, 2, 80, t + std::chrono::seconds(61)));
+    EXPECT_EQ(detector.tracked_pairs(), 1u);
+}
+
+TEST(PortScanDetectorTest, ActivePairsSurviveEviction) {
+    PortScanDetector detector(5, 60);
+    auto t = std::chrono::system_clock::now();
+
+    // A pair that keeps sending stays tracked while others age out.
+    for (int i = 0; i < 10; ++i) {
+        detector.check(syn_to_port(1, 2, 80, t + std::chrono::seconds(i * 20)));
+        detector.check(syn_to_port(100 + i, 2, 80, t + std::chrono::seconds(i * 20)));
+    }
+    // Pair 1 plus the pairs last seen at or after the cutoff (now - 60 s = t + 120 s): i = 6..9.
+    EXPECT_EQ(detector.tracked_pairs(), 5u);
+}
+
+TEST(PortScanDetectorTest, TrackedPairsAreCapped) {
+    PortScanDetector detector(5, 60, /*max_tracked_pairs=*/10);
+    auto t = std::chrono::system_clock::now();
+
+    for (uint32_t src = 1; src <= 1000; ++src)
+        detector.check(syn_to_port(src, 2, 80, t));
+    EXPECT_EQ(detector.tracked_pairs(), 10u);
+}
+
+TEST(PortScanDetectorTest, CapDropsTheLeastRecentlyActivePair) {
+    PortScanDetector detector(3, 60, /*max_tracked_pairs=*/2);
+    auto t = std::chrono::system_clock::now();
+
+    detector.check(syn_to_port(1, 2, 1, t));
+    detector.check(syn_to_port(2, 2, 1, t));
+    detector.check(syn_to_port(1, 2, 2, t));  // pair 1 is now the most recent
+    detector.check(syn_to_port(3, 2, 1, t));  // evicts pair 2, not pair 1
+
+    // Pair 1 still has ports 1 and 2; one more port reaches the threshold of 3.
+    EXPECT_TRUE(detector.check(syn_to_port(1, 2, 3, t)).has_value());
+}
+
+TEST(PortScanDetectorTest, OutOfOrderTimestampsDoNotResurrectExpiredPorts) {
+    PortScanDetector detector(3, 60);
+    auto t = std::chrono::system_clock::now();
+
+    detector.check(syn_to_port(1, 2, 1, t + std::chrono::seconds(100)));
+    // A packet stamped earlier than the newest one seen is treated as arriving "now".
+    detector.check(syn_to_port(1, 2, 2, t));
+    EXPECT_TRUE(detector.check(syn_to_port(1, 2, 3, t)).has_value());
+}
