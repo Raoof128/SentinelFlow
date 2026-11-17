@@ -18,3 +18,7 @@ target_include_directories(sentinelflow_tests PRIVATE ${CMAKE_SOURCE_DIR}/includ
 
 include(GoogleTest)
 gtest_discover_tests(sentinelflow_tests)
+
+# The default rules file is exercised by a test, so tell it where the file is.
+target_compile_definitions(sentinelflow_tests PRIVATE
+    SF_DEFAULT_RULES_PATH="${CMAKE_SOURCE_DIR}/rules/default.rules")
