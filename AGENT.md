@@ -55,3 +55,11 @@ Raouf:
 - Files: 60 .cpp/.hpp files, .github/workflows/ci.yml, CHANGELOG.md, AGENT.md
 - Verification: all six CI jobs pass on the pull request; 27/27 tests pass locally
 - Follow-ups: .clang-tidy naming options use camelCase, which clang-tidy 17 rejects (expects camelBack); nodiscard and brace findings remain advisory
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: Parser field reads; README accuracy
+- Summary: Replaced pointer-cast field reads in every parser with memcpy-based read_be16/read_be32 (alignment and aliasing safe); corrected the README's "zero-copy" claim and scoped the benchmark description to what it measures
+- Files: include/sentinelflow/utils/byte_order.hpp (new), src/parser/*.cpp, README.md, CHANGELOG.md, AGENT.md
+- Verification: 27/27 tests pass locally; clang-format 17 clean
+- Follow-ups: end-to-end benchmark over a pcap
