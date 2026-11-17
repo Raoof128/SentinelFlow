@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "sentinelflow/detection/signature_matcher.hpp"
 
 using namespace sf;

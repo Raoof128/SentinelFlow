@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "sentinelflow/parser/dns_parser.hpp"
 
 using namespace sf;
@@ -13,8 +14,7 @@ TEST(DNSParserTest, ParsesSimpleQuery) {
         0x00, 0x00,  // Authority: 0
         0x00, 0x00,  // Additional: 0
         // Query: example.com
-        0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e',
-        0x03, 'c', 'o', 'm',
+        0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 0x03, 'c', 'o', 'm',
         0x00,        // End of name
         0x00, 0x01,  // Type: A
         0x00, 0x01   // Class: IN

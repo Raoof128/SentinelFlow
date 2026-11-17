@@ -47,3 +47,11 @@ Raouf:
 - Files: 20+ files added/modified (see CHANGELOG.md for full list)
 - Verification: 27/27 tests pass, clean build, zero warnings
 - Follow-ups: Consider adding compiler warning flags (-Wall -Wextra -Wpedantic) to CMakeLists.txt
+
+Raouf:
+- Date: 2026-11-17 (AEDT)
+- Scope: CI — formatting only
+- Summary: Ran clang-format 17 with the repository .clang-format across include/, src/, tests/ and bench/ so the format-check job passes; no behaviour change
+- Files: 60 .cpp/.hpp files, CHANGELOG.md, AGENT.md
+- Verification: clang-format-17 --dry-run --Werror clean; 27/27 tests pass locally
+- Follow-ups: none

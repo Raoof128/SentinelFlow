@@ -1,5 +1,17 @@
 # Changelog — SentinelFlow
 
+## [Unreleased]
+
+Raouf:
+- **Date:** 2026-11-17 (AEDT)
+- **Scope:** CI — formatting only
+- **Summary:** Ran `clang-format` 17 with the repository `.clang-format` over `include/`, `src/`, `tests/` and `bench/` so the `format-check` CI job passes. Whitespace, line wrapping and include order only; no behaviour change.
+- **Files changed:** 60 `.cpp`/`.hpp` files, CHANGELOG.md, AGENT.md
+- **Verification:** `clang-format-17 --dry-run --Werror --style=file` clean; local build and `ctest` 27/27 pass
+- **Follow-ups:** none
+
+---
+
 ## [1.1.0] - 2026-03-21
 
 Raouf:

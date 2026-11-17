@@ -1,4 +1,5 @@
 #include "sentinelflow/capture/pcap_file_reader.hpp"
+
 #include <iostream>
 
 namespace sf {
@@ -7,7 +8,8 @@ PcapFileReader::PcapFileReader(const std::string& filepath)
     : filepath_(filepath), handle_(nullptr) {}
 
 PcapFileReader::~PcapFileReader() {
-    if (handle_) pcap_close(handle_);
+    if (handle_)
+        pcap_close(handle_);
 }
 
 bool PcapFileReader::open() {
@@ -34,19 +36,20 @@ bool PcapFileReader::set_filter(const std::string& filter_expr) {
 
 void PcapFileReader::start(PacketCallback callback, int max_packets) {
     callback_ = std::move(callback);
-    pcap_loop(handle_, max_packets,
+    pcap_loop(
+        handle_, max_packets,
         [](u_char* user, const struct pcap_pkthdr* hdr, const u_char* data) {
             auto* self = reinterpret_cast<PcapFileReader*>(user);
-            auto ts = std::chrono::system_clock::from_time_t(hdr->ts.tv_sec)
-                     + std::chrono::microseconds(hdr->ts.tv_usec);
+            auto ts = std::chrono::system_clock::from_time_t(hdr->ts.tv_sec) +
+                      std::chrono::microseconds(hdr->ts.tv_usec);
             self->callback_(data, hdr->caplen, ts);
         },
-        reinterpret_cast<u_char*>(this)
-    );
+        reinterpret_cast<u_char*>(this));
 }
 
 void PcapFileReader::stop() {
-    if (handle_) pcap_breakloop(handle_);
+    if (handle_)
+        pcap_breakloop(handle_);
 }
 
-} // namespace sf
+}  // namespace sf

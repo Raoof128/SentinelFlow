@@ -8,4 +8,4 @@ public:
     void emit(const Alert& alert) override;
 };
 
-} // namespace sf
+}  // namespace sf

@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "sentinelflow/detection/syn_flood_detector.hpp"
 
 using namespace sf;

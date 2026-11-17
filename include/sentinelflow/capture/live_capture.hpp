@@ -1,7 +1,9 @@
 #pragma once
-#include "sentinelflow/capture/packet_capture.hpp"
-#include <pcap.h>
 #include <string>
+
+#include <pcap.h>
+
+#include "sentinelflow/capture/packet_capture.hpp"
 
 namespace sf {
 
@@ -16,10 +18,10 @@ public:
     void stop() override;
 
 private:
-    std::string    interface_;
-    int            snap_len_;
-    pcap_t*        handle_;
+    std::string interface_;
+    int snap_len_;
+    pcap_t* handle_;
     PacketCallback callback_;
 };
 
-} // namespace sf
+}  // namespace sf

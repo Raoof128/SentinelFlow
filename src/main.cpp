@@ -1,22 +1,23 @@
-#include "sentinelflow/capture/live_capture.hpp"
-#include "sentinelflow/capture/pcap_file_reader.hpp"
-#include "sentinelflow/parser/ethernet_parser.hpp"
-#include "sentinelflow/parser/ip_parser.hpp"
-#include "sentinelflow/parser/tcp_parser.hpp"
-#include "sentinelflow/parser/udp_parser.hpp"
-#include "sentinelflow/parser/icmp_parser.hpp"
-#include "sentinelflow/parser/dns_parser.hpp"
-#include "sentinelflow/parser/arp_parser.hpp"
-#include "sentinelflow/detection/detection_engine.hpp"
+#include <csignal>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+
 #include "sentinelflow/alert/alert_manager.hpp"
 #include "sentinelflow/alert/console_logger.hpp"
 #include "sentinelflow/alert/csv_logger.hpp"
+#include "sentinelflow/capture/live_capture.hpp"
+#include "sentinelflow/capture/pcap_file_reader.hpp"
+#include "sentinelflow/detection/detection_engine.hpp"
+#include "sentinelflow/parser/arp_parser.hpp"
+#include "sentinelflow/parser/dns_parser.hpp"
+#include "sentinelflow/parser/ethernet_parser.hpp"
+#include "sentinelflow/parser/icmp_parser.hpp"
+#include "sentinelflow/parser/ip_parser.hpp"
+#include "sentinelflow/parser/tcp_parser.hpp"
+#include "sentinelflow/parser/udp_parser.hpp"
 #include "sentinelflow/stats/traffic_stats.hpp"
 #include "sentinelflow/utils/timestamp.hpp"
-#include <iostream>
-#include <iomanip>
-#include <csignal>
-#include <memory>
 
 using namespace sf;
 
@@ -27,21 +28,21 @@ static PacketCapture* g_capture = nullptr;
 
 void signal_handler(int) {
     running = false;
-    if (g_capture) g_capture->stop();
+    if (g_capture)
+        g_capture->stop();
 }
 
-void process_packet(const uint8_t* data, uint32_t length,
-                    std::chrono::system_clock::time_point ts,
-                    DetectionEngine& engine, AlertManager& alerts,
-                    TrafficStats& stats) {
+void process_packet(const uint8_t* data, uint32_t length, std::chrono::system_clock::time_point ts,
+                    DetectionEngine& engine, AlertManager& alerts, TrafficStats& stats) {
     ParsedPacket pkt;
-    pkt.timestamp  = ts;
-    pkt.raw_data   = data;
+    pkt.timestamp = ts;
+    pkt.raw_data = data;
     pkt.raw_length = length;
-    pkt.length     = length;
+    pkt.length = length;
 
     // Layer 2: Ethernet
-    if (!parse_ethernet(data, length, pkt.ethernet)) return;
+    if (!parse_ethernet(data, length, pkt.ethernet))
+        return;
 
     uint32_t offset = 14;
 
@@ -99,32 +100,40 @@ void process_packet(const uint8_t* data, uint32_t length,
     // Verbose: print every packet
     if (verbose && pkt.ipv4) {
         std::cout << ip_to_string(pkt.ipv4->src_ip);
-        if (pkt.tcp)       std::cout << ":" << pkt.tcp->src_port;
-        else if (pkt.udp)  std::cout << ":" << pkt.udp->src_port;
+        if (pkt.tcp)
+            std::cout << ":" << pkt.tcp->src_port;
+        else if (pkt.udp)
+            std::cout << ":" << pkt.udp->src_port;
         std::cout << " -> " << ip_to_string(pkt.ipv4->dst_ip);
-        if (pkt.tcp)       std::cout << ":" << pkt.tcp->dst_port;
-        else if (pkt.udp)  std::cout << ":" << pkt.udp->dst_port;
+        if (pkt.tcp)
+            std::cout << ":" << pkt.tcp->dst_port;
+        else if (pkt.udp)
+            std::cout << ":" << pkt.udp->dst_port;
 
         if (pkt.tcp) {
             std::cout << " [TCP";
-            if (pkt.tcp->flags & TCP_SYN) std::cout << " SYN";
-            if (pkt.tcp->flags & TCP_ACK) std::cout << " ACK";
-            if (pkt.tcp->flags & TCP_FIN) std::cout << " FIN";
-            if (pkt.tcp->flags & TCP_RST) std::cout << " RST";
-            if (pkt.tcp->flags & TCP_PSH) std::cout << " PSH";
+            if (pkt.tcp->flags & TCP_SYN)
+                std::cout << " SYN";
+            if (pkt.tcp->flags & TCP_ACK)
+                std::cout << " ACK";
+            if (pkt.tcp->flags & TCP_FIN)
+                std::cout << " FIN";
+            if (pkt.tcp->flags & TCP_RST)
+                std::cout << " RST";
+            if (pkt.tcp->flags & TCP_PSH)
+                std::cout << " PSH";
             std::cout << "]";
         } else if (pkt.udp) {
             std::cout << " [UDP]";
-            if (pkt.dns) std::cout << " DNS:" << pkt.dns->query_name;
+            if (pkt.dns)
+                std::cout << " DNS:" << pkt.dns->query_name;
         } else if (pkt.icmp) {
             std::cout << " [ICMP type=" << (int)pkt.icmp->type << "]";
         }
         std::cout << " len=" << length << std::endl;
     } else if (verbose && pkt.arp) {
-        std::cout << ip_to_string(pkt.arp->sender_ip) << " -> "
-                  << ip_to_string(pkt.arp->target_ip)
-                  << " [ARP opcode=" << pkt.arp->opcode << "]"
-                  << std::endl;
+        std::cout << ip_to_string(pkt.arp->sender_ip) << " -> " << ip_to_string(pkt.arp->target_ip)
+                  << " [ARP opcode=" << pkt.arp->opcode << "]" << std::endl;
     }
 
     // Run detection
@@ -209,7 +218,8 @@ int main(int argc, char* argv[]) {
 
     if (!capture->open()) {
         std::cerr << "Failed to open capture source. ";
-        if (pcap_file.empty()) std::cerr << "Try running with sudo.";
+        if (pcap_file.empty())
+            std::cerr << "Try running with sudo.";
         std::cerr << std::endl;
         return 1;
     }
@@ -225,12 +235,12 @@ int main(int argc, char* argv[]) {
     std::cout << "Press Ctrl+C to stop" << std::endl;
     std::cout << std::string(50, '-') << std::endl;
 
-    capture->start([&](const uint8_t* data, uint32_t length,
-                       std::chrono::system_clock::time_point ts) {
-        if (running) {
-            process_packet(data, length, ts, engine, alert_manager, stats);
-        }
-    });
+    capture->start(
+        [&](const uint8_t* data, uint32_t length, std::chrono::system_clock::time_point ts) {
+            if (running) {
+                process_packet(data, length, ts, engine, alert_manager, stats);
+            }
+        });
 
     stats.print_summary();
     std::cout << "Total alerts: " << alert_manager.total_alerts() << std::endl;

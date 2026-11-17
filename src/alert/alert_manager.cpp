@@ -19,4 +19,4 @@ void AlertManager::process(const std::vector<Alert>& alerts) {
     }
 }
 
-} // namespace sf
+}  // namespace sf

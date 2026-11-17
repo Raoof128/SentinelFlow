@@ -1,9 +1,10 @@
 #pragma once
+#include <optional>
+#include <vector>
+
+#include "sentinelflow/alert/alert.hpp"
 #include "sentinelflow/detection/rule.hpp"
 #include "sentinelflow/parser/packet.hpp"
-#include "sentinelflow/alert/alert.hpp"
-#include <vector>
-#include <optional>
 
 namespace sf {
 
@@ -20,4 +21,4 @@ private:
     std::vector<Rule> rules_;
 };
 
-} // namespace sf
+}  // namespace sf
